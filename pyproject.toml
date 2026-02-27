@@ -1,0 +1,94 @@
+[project]
+name = "stock-dashboad-streamlit"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "plotly>=6.0.0",
+    "streamlit>=1.54.0",
+    "yfinance>=1.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "langchain-huggingface>=0.2.0",
+    "mypy>=1.15.0",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.1.1",
+    "ruff>=0.9.6",
+    "sentence-transformers>=4.1.0",
+    "tox>=4.24.1",
+    "types-pyyaml>=6.0.12.20250915",
+]
+[tool.uv]
+find-links = [
+    "https://download.pytorch.org/whl/cpu/torch",
+]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+python_version = "3.12"
+show_error_context = true
+show_column_numbers = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[tool.black]
+line-length = 79
+
+[tool.ruff]
+line-length = 79
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestype error
+    "W",   # pycodestyle warning
+    "F",   # pyflakes
+    "C90", # mccabe
+    "I",   # isort
+    "D",   # pydocstyle
+    "B",   # flake8-bugbear
+    "COM", # flake8-commas
+    "S",   # flake8-bandit
+    "PTH", # flake8-use-pathlib
+    "UP",  # pyupgrade
+]
+ignore = [
+    "D415", # pydocstyle about First line should end with a '.' , '?' or '!'
+    "E501", # line too long, handled by black
+]
+unfixable = [
+    "F401", # disable auto-fix for unused-imports
+    "F841", # disable auto-fix for unused-variable
+]
+
+[tool.ruff.lint.per-file-ignores]
+# ignore assert error only in unnit-test
+"*test_*.py" = ["S101"]
+"*_test.py" = ["S101"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Form",
+    "fastapi.Depends",
+    "fastapi.params.Depends",
+    "fastapi.Query",
+    "fastapi.params.Query",
+]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
