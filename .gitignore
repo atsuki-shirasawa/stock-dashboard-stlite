@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Scratch files
+hoge.py
+index copy.html

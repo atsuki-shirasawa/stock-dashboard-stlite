@@ -1,12 +1,15 @@
-"""株価ダッシュボード - yfinance + Streamlit + Plotly."""
+"""Stock Dashboard - Streamlit + Plotly."""
+
+import urllib.parse
+from datetime import UTC, date, datetime, timedelta
 
 import pandas as pd
 import plotly.graph_objects as go
+import requests
 import streamlit as st
-import yfinance as yf
 from plotly.subplots import make_subplots
 
-# ── カラーテーマ ──────────────────────────────────────────────────────
+# ── Color theme ───────────────────────────────────────────────────────
 BG = "#0d1117"
 PANEL_BG = "#161b22"
 UP_COLOR = "#00d4a0"
@@ -20,135 +23,169 @@ SPIKE_COLOR = "rgba(255,255,255,0.25)"
 TEXT_COLOR = "#c9d1d9"
 SUBTEXT_COLOR = "#8b949e"
 
+# ── Period config ─────────────────────────────────────────────────────
 PERIODS: dict[str, dict[str, str]] = {
-    "1日": {"period": "1d", "interval": "5m"},
-    "1週": {"period": "5d", "interval": "30m"},
-    "1ヶ月": {"period": "1mo", "interval": "1d"},
-    "6ヶ月": {"period": "6mo", "interval": "1d"},
-    "1年": {"period": "1y", "interval": "1d"},
-    "5年": {"period": "5y", "interval": "1wk"},
-    "10年": {"period": "10y", "interval": "1mo"},
+    "1D": {"period": "1d", "interval": "5m"},
+    "1W": {"period": "5d", "interval": "30m"},
+    "1M": {"period": "1mo", "interval": "1d"},
+    "6M": {"period": "6mo", "interval": "1d"},
+    "1Y": {"period": "1y", "interval": "1d"},
+    "5Y": {"period": "5y", "interval": "1wk"},
+    "10Y": {"period": "10y", "interval": "1mo"},
+}
+_PERIOD_DELTA: dict[str, timedelta] = {
+    "1D": timedelta(days=1),
+    "1W": timedelta(weeks=1),
+    "1M": timedelta(days=30),
+    "6M": timedelta(days=182),
+    "1Y": timedelta(days=365),
+    "5Y": timedelta(days=365 * 5),
+    "10Y": timedelta(days=365 * 10),
+}
+_DELTA_LABELS: dict[str, str] = {
+    "1D": "vs prev day",
+    "1W": "vs 1W ago",
+    "1M": "vs 1M ago",
+    "6M": "vs 6M ago",
+    "1Y": "vs 1Y ago",
+    "5Y": "vs 5Y ago",
+    "10Y": "vs 10Y ago",
 }
 
-# クエリパラメータ用の英語キー（ラベル → キー / キー → ラベル）
+# Query param keys (label → key / key → label)
 PERIOD_TO_KEY: dict[str, str] = {
-    "1日": "1d",
-    "1週": "1w",
-    "1ヶ月": "1mo",
-    "6ヶ月": "6mo",
-    "1年": "1y",
-    "5年": "5y",
-    "10年": "10y",
+    "1D": "1d",
+    "1W": "1w",
+    "1M": "1mo",
+    "6M": "6mo",
+    "1Y": "1y",
+    "5Y": "5y",
+    "10Y": "10y",
 }
 PERIOD_FROM_KEY: dict[str, str] = {v: k for k, v in PERIOD_TO_KEY.items()}
 
-CHART_TYPES = ["ローソク足", "エリア"]
-CHART_ICONS: dict[str, str] = {
-    "ローソク足": "🕯️",
-    "エリア": "📈",
-}
-CHART_TO_KEY: dict[str, str] = {"ローソク足": "candlestick", "エリア": "area"}
+CHART_TYPES = ["Candlestick", "Area"]
+CHART_ICONS: dict[str, str] = {"Candlestick": "🕯️", "Area": "📈"}
+CHART_TO_KEY: dict[str, str] = {"Candlestick": "candlestick", "Area": "area"}
 CHART_FROM_KEY: dict[str, str] = {v: k for k, v in CHART_TO_KEY.items()}
 
 DEFAULT_SYMBOL = "AAPL"
-DEFAULT_PERIOD = "1年"
-DEFAULT_CHART = "エリア"
+DEFAULT_PERIOD = "1Y"
+DEFAULT_CHART = "Area"
+
+# ── Yahoo Finance API ─────────────────────────────────────────────────
+_CORS_PROXY = "https://corsproxy.io/?url="
+_YF_BASE = "https://query1.finance.yahoo.com/v8/finance/chart"
+_YF_HEADERS: dict[str, str] = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json",
+}
+
+# ── Chart x-axis common config ────────────────────────────────────────
+_XAXIS_COMMON: dict = dict(
+    showgrid=False,
+    zeroline=False,
+    showspikes=True,
+    spikecolor=SPIKE_COLOR,
+    spikethickness=1,
+    spikedash="dot",
+    spikesnap="cursor",
+    tickfont=dict(color=SUBTEXT_COLOR, size=11),
+)
 
 
-def fetch_stock_data(
+def _yf_url(
     symbol: str,
-    period: str,
-    interval: str,
-) -> pd.DataFrame:
-    """指定した銘柄・期間・間隔で株価データを取得する.
+    period_label: str,
+    end_date: date | None = None,
+) -> str:
+    """Return the Yahoo Finance chart API URL routed through a CORS proxy.
+
+    Uses range-based query when end_date is None (always up to today),
+    and period1/period2 timestamps when a specific end date is given.
+    """
+    cfg = PERIODS[period_label]
+    interval = cfg["interval"]
+    if end_date is None:
+        yf = f"{_YF_BASE}/{symbol}?range={cfg['period']}&interval={interval}"
+    else:
+        end_dt = datetime.combine(end_date, datetime.max.time(), tzinfo=UTC)
+        start_dt = end_dt - _PERIOD_DELTA[period_label]
+        yf = (
+            f"{_YF_BASE}/{symbol}"
+            f"?period1={int(start_dt.timestamp())}"
+            f"&period2={int(end_dt.timestamp())}"
+            f"&interval={interval}"
+        )
+    return _CORS_PROXY + urllib.parse.quote(yf, safe="")
+
+
+def _parse_meta(meta: dict) -> dict:
+    """Extract basic stock info from a chart API meta object."""
+    return {
+        "shortName": meta.get("shortName") or meta.get("longName"),
+        "previousClose": meta.get("chartPreviousClose")
+        or meta.get("previousClose"),
+        "currency": meta.get("currency"),
+        "fiftyTwoWeekHigh": meta.get("fiftyTwoWeekHigh"),
+        "fiftyTwoWeekLow": meta.get("fiftyTwoWeekLow"),
+    }
+
+
+def fetch_chart(
+    symbol: str,
+    period_label: str,
+    end_date: date | None = None,
+) -> tuple[pd.DataFrame, dict]:
+    """Fetch OHLCV data and stock meta info in a single API call.
 
     Args:
-        symbol: ティッカーシンボル (例: AAPL, 7203.T)
-        period: 取得期間 (例: 1d, 1mo, 1y)
-        interval: データ間隔 (例: 5m, 1d, 1wk)
+        symbol: Ticker symbol (e.g. AAPL, 7203.T)
+        period_label: Period key from PERIODS (e.g. "1Y", "6M")
+        end_date: End date for the data range; None means up to today.
 
     Returns:
-        OHLCV データを含むDataFrame
+        Tuple of (OHLCV DataFrame, meta info dict).
     """
-    ticker = yf.Ticker(symbol)
-    return ticker.history(period=period, interval=interval)
+    resp = requests.get(
+        _yf_url(symbol, period_label, end_date),
+        headers=_YF_HEADERS,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    chart_result = resp.json().get("chart", {}).get("result") or []
+    if not chart_result:
+        return pd.DataFrame(), {}
 
+    result = chart_result[0]
+    timestamps = result.get("timestamp", [])
+    quotes = result.get("indicators", {}).get("quote", [{}])[0]
 
-def fetch_stock_info(symbol: str) -> dict:
-    """銘柄の基本情報・財務指標を取得する.
-
-    Args:
-        symbol: ティッカーシンボル
-
-    Returns:
-        yfinance の info 辞書（取得失敗時は空辞書）
-    """
-    try:
-        return yf.Ticker(symbol).info
-    except Exception:  # noqa: BLE001
-        return {}
-
-
-def _fmt_large(value: float | None) -> str:
-    """大きな数値を T / B / M / K のサフィックスで短縮表示する.
-
-    Args:
-        value: 数値（None の場合は "—" を返す）
-
-    Returns:
-        整形済み文字列
-    """
-    if value is None:
-        return "—"
-    abs_v = abs(value)
-    if abs_v >= 1e12:
-        return f"{value / 1e12:.2f}T"
-    if abs_v >= 1e9:
-        return f"{value / 1e9:.2f}B"
-    if abs_v >= 1e6:
-        return f"{value / 1e6:.2f}M"
-    if abs_v >= 1e3:
-        return f"{value / 1e3:.2f}K"
-    return f"{value:,.2f}"
-
-
-def _fmt_ratio(value: float | None, digits: int = 2) -> str:
-    """倍率・比率を整形する（None は "—"）.
-
-    Args:
-        value: 数値
-        digits: 小数点以下の桁数
-
-    Returns:
-        整形済み文字列
-    """
-    if value is None:
-        return "—"
-    return f"{value:,.{digits}f}x"
-
-
-def _fmt_pct(value: float | None) -> str:
-    """小数の利回りをパーセント表示にする（None は "—"）.
-
-    Args:
-        value: 小数形式の数値 (例: 0.015 → "1.50%")
-
-    Returns:
-        整形済み文字列
-    """
-    if value is None:
-        return "—"
-    return f"{value * 100:.2f}%"
+    df = pd.DataFrame(
+        {
+            "Open": quotes.get("open", []),
+            "High": quotes.get("high", []),
+            "Low": quotes.get("low", []),
+            "Close": quotes.get("close", []),
+            "Volume": quotes.get("volume", []),
+        },
+        index=pd.to_datetime(timestamps, unit="s", utc=True).tz_convert("Asia/Tokyo"),
+    )
+    return df.dropna(subset=["Close"]), _parse_meta(result.get("meta", {}))
 
 
 def _compact_metrics_html(items: list[tuple[str, str]]) -> str:
-    """ラベルと値のペアをコンパクトな横並びHTMLに変換する.
+    """Convert (label, value) pairs into compact inline HTML.
 
     Args:
-        items: (ラベル, 値) のリスト
+        items: List of (label, value) tuples.
 
     Returns:
-        Streamlit の st.markdown に渡すHTML文字列
+        HTML string to pass to st.markdown.
     """
     cells = "".join(
         f"""
@@ -166,12 +203,12 @@ def _compact_metrics_html(items: list[tuple[str, str]]) -> str:
 
 
 def _add_candlestick(fig: go.Figure, df: pd.DataFrame, symbol: str) -> None:
-    """ローソク足トレースを追加する.
+    """Add a candlestick trace to the figure.
 
     Args:
-        fig: 追加先の Figure
-        df: OHLCV データ
-        symbol: ティッカーシンボル
+        fig: Target Figure.
+        df: OHLCV data.
+        symbol: Ticker symbol.
     """
     fig.add_trace(
         go.Candlestick(
@@ -180,14 +217,8 @@ def _add_candlestick(fig: go.Figure, df: pd.DataFrame, symbol: str) -> None:
             high=df["High"],
             low=df["Low"],
             close=df["Close"],
-            increasing=dict(
-                line=dict(color=UP_COLOR, width=1),
-                fillcolor=UP_COLOR,
-            ),
-            decreasing=dict(
-                line=dict(color=DOWN_COLOR, width=1),
-                fillcolor=DOWN_COLOR,
-            ),
+            increasing=dict(line=dict(color=UP_COLOR, width=1), fillcolor=UP_COLOR),
+            decreasing=dict(line=dict(color=DOWN_COLOR, width=1), fillcolor=DOWN_COLOR),
             name=symbol,
             hoverlabel=dict(bgcolor=PANEL_BG),
         ),
@@ -197,19 +228,18 @@ def _add_candlestick(fig: go.Figure, df: pd.DataFrame, symbol: str) -> None:
 
 
 def _add_area(fig: go.Figure, df: pd.DataFrame, symbol: str) -> None:
-    """エリアグラフトレースを追加する.
+    """Add an area chart trace to the figure.
 
     Args:
-        fig: 追加先の Figure
-        df: OHLCV データ
-        symbol: ティッカーシンボル
+        fig: Target Figure.
+        df: OHLCV data.
+        symbol: Ticker symbol.
     """
     is_up = df["Close"].iloc[-1] >= df["Close"].iloc[0]
     line_color = UP_COLOR if is_up else DOWN_COLOR
     fill_color = UP_FILL if is_up else DOWN_FILL
 
-
-    # ベースライン（最安値）を下限にfillすることで自然なグラデーション感を出す
+    # Fill down to just below the period low for a natural gradient effect
     base = float(df["Close"].min()) * 0.998
     fig.add_trace(
         go.Scatter(
@@ -234,24 +264,25 @@ def _add_area(fig: go.Figure, df: pd.DataFrame, symbol: str) -> None:
             fillcolor=fill_color,
             hovertemplate=(
                 "<b>%{x|%Y-%m-%d %H:%M}</b><br>"
-                f"終値: %{{y:,.2f}}<extra>{symbol}</extra>"
+                f"Close: %{{y:,.2f}}<extra>{symbol}</extra>"
             ),
         ),
         row=1,
         col=1,
     )
 
-def _get_rangebreaks(df: pd.DataFrame) -> list[dict]:
-    """取引のない日（土日・祝日など）を rangebreaks 形式で返す.
 
-    実際のデータに存在しない日付を全日程と比較して特定するため、
-    国や市場の祝日を問わず正確に除外できる。
+def _get_rangebreaks(df: pd.DataFrame) -> list[dict]:
+    """Return rangebreaks for non-trading days (weekends, holidays).
+
+    Identifies missing dates by comparing actual trading days against the full
+    calendar range, so it works correctly for any market or region.
 
     Args:
-        df: OHLCV データ（index が DatetimeIndex）
+        df: OHLCV data with a DatetimeIndex.
 
     Returns:
-        Plotly の rangebreaks に渡す辞書リスト
+        List of dicts suitable for Plotly rangebreaks.
     """
     trading_days = pd.DatetimeIndex(df.index.date).normalize()
     trading_set = set(trading_days)
@@ -268,16 +299,16 @@ def build_chart(
     period_label: str,
     chart_type: str,
 ) -> go.Figure:
-    """株価チャート（ローソク足 or エリア）+ 出来高を生成する.
+    """Build a price chart (candlestick or area) with a volume subplot.
 
     Args:
-        df: OHLCV データを含むDataFrame
-        symbol: ティッカーシンボル
-        period_label: 表示用の期間ラベル
-        chart_type: "ローソク足" または "エリア"
+        df: OHLCV DataFrame.
+        symbol: Ticker symbol.
+        period_label: Display label for the selected period.
+        chart_type: "Candlestick" or "Area".
 
     Returns:
-        Plotly の Figure オブジェクト
+        Plotly Figure object.
     """
     fig = make_subplots(
         rows=2,
@@ -287,13 +318,13 @@ def build_chart(
         row_heights=[0.72, 0.28],
     )
 
-    # 1週は夜間ギャップ対策としてx軸をカテゴリ文字列で扱う
-    use_category = period_label == "1週"
+    # For 1W, use categorical x-axis to avoid overnight gaps
+    use_category = period_label == "1W"
     if use_category:
         df = df.copy()
         df.index = df.index.strftime("%Y-%m-%d %H:%M")
 
-    if chart_type == "エリア":
+    if chart_type == "Area":
         _add_area(fig, df, symbol)
     else:
         _add_candlestick(fig, df, symbol)
@@ -306,10 +337,10 @@ def build_chart(
         go.Bar(
             x=df.index,
             y=df["Volume"],
-            name="出来高",
+            name="Volume",
             marker=dict(color=bar_colors, line=dict(width=0)),
             showlegend=False,
-            hovertemplate="出来高: %{y:,.0f}<extra></extra>",
+            hovertemplate="Volume: %{y:,.0f}<extra></extra>",
         ),
         row=2,
         col=1,
@@ -334,71 +365,58 @@ def build_chart(
             bordercolor="rgba(255,255,255,0.12)",
             font=dict(color=TEXT_COLOR, size=12),
         ),
-        legend=dict(
-            bgcolor="rgba(0,0,0,0)",
-            bordercolor="rgba(0,0,0,0)",
-        ),
+        legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="rgba(0,0,0,0)"),
     )
+
     if use_category:
-        fig.update_xaxes(
-            type="category",
-            showgrid=False,
-            zeroline=False,
-            showspikes=True,
-            spikecolor=SPIKE_COLOR,
-            spikethickness=1,
-            spikedash="dot",
-            spikesnap="cursor",
-            tickfont=dict(color=SUBTEXT_COLOR, size=11),
-            nticks=6,
-        )
+        fig.update_xaxes(**_XAXIS_COMMON, type="category", nticks=6)
     else:
-        fig.update_xaxes(
-            showgrid=False,
-            zeroline=False,
-            showspikes=True,
-            spikecolor=SPIKE_COLOR,
-            spikethickness=1,
-            spikedash="dot",
-            spikesnap="cursor",
-            tickfont=dict(color=SUBTEXT_COLOR, size=11),
-            rangebreaks=_get_rangebreaks(df),
-        )
+        fig.update_xaxes(**_XAXIS_COMMON, rangebreaks=_get_rangebreaks(df))
+
     fig.update_yaxes(
         gridcolor=GRID_COLOR,
         zeroline=False,
         showspikes=False,
         tickfont=dict(color=SUBTEXT_COLOR, size=11),
         side="right",
+        title_text="",
     )
-    fig.update_yaxes(title_text="", row=1, col=1)
-    fig.update_yaxes(title_text="", row=2, col=1)
 
     return fig
 
 
-def sync_query_params(symbol: str, period: str, chart: str) -> None:
-    """URLのクエリパラメータを現在の選択に同期する.
+def sync_query_params(
+    symbol: str,
+    period: str,
+    chart: str,
+    end_date: date | None = None,
+) -> None:
+    """Sync URL query parameters to the current selection.
 
     Args:
-        symbol: ティッカーシンボル
-        period: 期間ラベル
-        chart: チャートタイプ
+        symbol: Ticker symbol.
+        period: Period label.
+        chart: Chart type.
+        end_date: End date; omitted from URL when None (= today).
     """
     st.query_params["symbol"] = symbol
     st.query_params["period"] = PERIOD_TO_KEY.get(period, period)
     st.query_params["chart"] = CHART_TO_KEY.get(chart, chart)
+    if end_date is not None and end_date < date.today():
+        st.query_params["date"] = end_date.isoformat()
+    else:
+        st.query_params.pop("date", None)
 
 
 def main() -> None:
-    """株価ダッシュボードのエントリーポイント."""
+    """Entry point for the stock dashboard."""
     st.set_page_config(
-        page_title="株価ダッシュボード",
+        page_title="Stock Dashboard",
         page_icon="📈",
         layout="wide",
     )
 
-    # ── クエリパラメータから初期値を読み込む ──────────────────────────
+    # ── Read initial values from query params ─────────────────────────
     params = st.query_params
     init_symbol: str = str(params.get("symbol", DEFAULT_SYMBOL)).upper()
     _period_raw: str = str(params.get("period", PERIOD_TO_KEY[DEFAULT_PERIOD]))
@@ -409,25 +427,40 @@ def main() -> None:
     init_chart: str = CHART_FROM_KEY.get(_chart_raw, DEFAULT_CHART)
     if init_chart not in CHART_TYPES:
         init_chart = DEFAULT_CHART
+    _date_raw = params.get("date")
+    try:
+        init_date: date = (
+            date.fromisoformat(_date_raw) if _date_raw else date.today()
+        )
+    except ValueError:
+        init_date = date.today()
 
-    # ── コントロールバー ──────────────────────────────────────────────
-    ctl_left, ctl_right = st.columns([3, 1])
+    # ── Controls ──────────────────────────────────────────────────────
+    ctl_left, ctl_mid, ctl_right = st.columns([2, 1, 1])
 
     with ctl_left:
         input_symbol = (
             st.text_input(
-                "銘柄コード",
+                "Ticker",
                 value=init_symbol,
                 label_visibility="collapsed",
-                placeholder="銘柄コード (例: AAPL / 7203.T)",
+                placeholder="Ticker (e.g. AAPL / 7203.T)",
             )
             .strip()
             .upper()
         )
 
+    with ctl_mid:
+        input_date: date = st.date_input(  # type: ignore[assignment]
+            "Date",
+            value=init_date,
+            max_value=date.today(),
+            label_visibility="collapsed",
+        )
+
     with ctl_right:
         input_chart = st.segmented_control(
-            "チャートタイプ",
+            "Chart type",
             options=CHART_TYPES,
             default=init_chart,
             label_visibility="collapsed",
@@ -435,61 +468,48 @@ def main() -> None:
         )
 
     input_period = st.segmented_control(
-        "期間",
+        "Period",
         options=list(PERIODS.keys()),
         default=init_period,
         label_visibility="collapsed",
     )
 
-    # 入力が変わったらURLに反映
+    # Sync URL when inputs change
     resolved_period: str = input_period or init_period  # type: ignore[assignment]
     resolved_chart: str = input_chart or init_chart  # type: ignore[assignment]
+    resolved_date: date = input_date or date.today()
+    end_date: date | None = (
+        resolved_date if resolved_date < date.today() else None
+    )
 
     if (
         input_symbol != init_symbol
         or resolved_period != init_period
         or resolved_chart != init_chart
+        or resolved_date != init_date
     ):
-        sync_query_params(input_symbol, resolved_period, resolved_chart)
+        sync_query_params(input_symbol, resolved_period, resolved_chart, end_date)
 
     symbol = input_symbol or DEFAULT_SYMBOL
     period_label = resolved_period
     chart_type = resolved_chart
-    period_cfg = PERIODS[period_label]
 
-    # ── データ取得 ────────────────────────────────────────────────────
-    with st.spinner(f"{symbol} のデータを取得中..."):
-        df = fetch_stock_data(
-            symbol,
-            period_cfg["period"],
-            period_cfg["interval"],
-        )
-        info = fetch_stock_info(symbol)
+    # ── Fetch OHLCV and meta in a single API call ─────────────────────
+    with st.spinner(f"Fetching data for {symbol}..."):
+        df, info = fetch_chart(symbol, period_label, end_date)
 
-    if df is None or df.empty:
+    if df.empty:
         st.error(
-            f"**{symbol}** のデータを取得できませんでした。"
-            "銘柄コードを確認してください。",
+            f"No data found for **{symbol}**. Please check the ticker symbol.",
         )
         return
 
-    # ── 現在値（グラフ上） ────────────────────────────────────────────
+    # ── Price and change ──────────────────────────────────────────────
     latest = df["Close"].iloc[-1]
+    delta_label = _DELTA_LABELS.get(period_label, "vs prev day")
 
-    # 期間に応じた比較基準と比較ラベルを決定
-    _delta_labels: dict[str, str] = {
-        "1日": "前日比",
-        "1週": "1週前比",
-        "1ヶ月": "1ヶ月前比",
-        "6ヶ月": "6ヶ月前比",
-        "1年": "1年前比",
-        "5年": "5年前比",
-        "10年": "10年前比",
-    }
-    delta_label = _delta_labels.get(period_label, "前日比")
-
-    if period_label == "1日":
-        # 前日終値を info から取得（分足DFの先頭は当日始値付近のため不適切）
+    if period_label == "1D":
+        # Use previousClose from meta; intraday df[0] is near the open, not prev close
         prev = float(info.get("previousClose") or df["Close"].iloc[0])
     else:
         prev = float(df["Close"].iloc[0])
@@ -505,34 +525,22 @@ def main() -> None:
         delta=f"{delta:+.2f}{currency_str}  ({delta_pct:+.2f}%)  {delta_label}",
     )
 
-    # ── チャート ──────────────────────────────────────────────────────
-    fig = build_chart(df, symbol, period_label, chart_type)
-    st.plotly_chart(fig, use_container_width=True)
+    # ── Chart ─────────────────────────────────────────────────────────
+    st.plotly_chart(
+        build_chart(df, symbol, period_label, chart_type),
+        use_container_width=True,
+    )
 
-    # ── サブメトリクス（グラフ下・コンパクト） ────────────────────────
-    mkt_cap = info.get("marketCap")
-    trailing_pe = info.get("trailingPE")
-    forward_pe = info.get("forwardPE")
-    pbr = info.get("priceToBook")
-    div_yield = info.get("dividendYield")
-    eps = info.get("trailingEps")
+    # ── Sub-metrics ───────────────────────────────────────────────────
     week52_high = info.get("fiftyTwoWeekHigh")
     week52_low = info.get("fiftyTwoWeekLow")
-    currency_label = currency or "—"
-
     sub_items: list[tuple[str, str]] = [
-        ("期間高値", f"{df['High'].max():,.2f}"),
-        ("期間安値", f"{df['Low'].min():,.2f}"),
-        ("直近出来高", f"{df['Volume'].iloc[-1]:,.0f}"),
-        ("時価総額", _fmt_large(mkt_cap)),
-        ("PER 実績", _fmt_ratio(trailing_pe)),
-        ("PER 予想", _fmt_ratio(forward_pe)),
-        ("PBR", _fmt_ratio(pbr)),
-        ("配当利回り", _fmt_pct(div_yield)),
-        ("EPS 実績", _fmt_large(eps) if eps is not None else "—"),
-        ("52週高値", f"{week52_high:,.2f}" if week52_high else "—"),
-        ("52週安値", f"{week52_low:,.2f}" if week52_low else "—"),
-        ("通貨", currency_label),
+        ("Period High", f"{df['High'].max():,.2f}"),
+        ("Period Low", f"{df['Low'].min():,.2f}"),
+        ("Latest Volume", f"{df['Volume'].iloc[-1]:,.0f}"),
+        ("52W High", f"{week52_high:,.2f}" if week52_high else "—"),
+        ("52W Low", f"{week52_low:,.2f}" if week52_low else "—"),
+        ("Currency", currency or "—"),
     ]
     st.markdown(_compact_metrics_html(sub_items), unsafe_allow_html=True)
 
