@@ -48,10 +48,10 @@ export default function PriceHeader({
       >
         {name}
       </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <span
           style={{
-            fontSize: 26,
+            fontSize: "clamp(18px, 2.4vw, 32px)",
             fontWeight: 700,
             color: TEXT_COLOR,
             fontFamily: "sans-serif",
@@ -60,7 +60,7 @@ export default function PriceHeader({
           {latest.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           {currencyStr}
         </span>
-        <span style={{ fontSize: 14, color, fontFamily: "sans-serif" }}>
+        <span style={{ fontSize: "clamp(11px, 1.2vw, 14px)", color, fontFamily: "sans-serif" }}>
           {sign}
           {delta.toFixed(2)}
           {currencyStr}&nbsp;({sign}

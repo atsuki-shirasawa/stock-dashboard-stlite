@@ -225,7 +225,7 @@ export default function StockChart({
         }
       : {}),
     autosize: true,
-    margin: { t: 56, b: 20, l: 12, r: 12 },
+    margin: { t: 56, b: 20, l: 12, r: 60 },
     plot_bgcolor: BG,
     paper_bgcolor: BG,
     font: { color: TEXT_COLOR, family: "sans-serif", size: 12 },
@@ -235,7 +235,7 @@ export default function StockChart({
       bordercolor: "rgba(255,255,255,0.12)",
       font: { color: TEXT_COLOR, size: 12 },
     },
-    legend: { bgcolor: "rgba(0,0,0,0)", bordercolor: "rgba(0,0,0,0)" },
+    showlegend: false,
   };
 
   return (
