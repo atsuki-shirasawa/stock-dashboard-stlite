@@ -5,6 +5,11 @@ export const UP_COLOR = "#10b981";
 export const DOWN_COLOR = "#ef4444";
 export const UP_FILL = "rgba(16,185,129,0.12)";
 export const DOWN_FILL = "rgba(239,68,68,0.10)";
+// Gradient fill: top (near line) → opaque, bottom (baseline) → transparent
+export const UP_FILL_GRAD_TOP = "rgba(16,185,129,0.5)";
+export const UP_FILL_GRAD_BOT = "rgba(16,185,129,0.0)";
+export const DOWN_FILL_GRAD_TOP = "rgba(239,68,68,0.5)";
+export const DOWN_FILL_GRAD_BOT = "rgba(239,68,68,0.0)";
 export const VOL_UP = "rgba(16,185,129,0.40)";
 export const VOL_DOWN = "rgba(239,68,68,0.40)";
 export const GRID_COLOR = "rgba(148,163,184,0.20)";

@@ -17,14 +17,6 @@ interface PriceHeaderProps {
 	periodLabel: string;
 }
 
-function fmtDate(ts: number): string {
-	const d = new Date(ts);
-	const y = d.getFullYear();
-	const m = String(d.getMonth() + 1).padStart(2, "0");
-	const day = String(d.getDate()).padStart(2, "0");
-	return `${y}/${m}/${day}`;
-}
-
 export default function PriceHeader({
 	symbol,
 	meta,
@@ -56,14 +48,14 @@ export default function PriceHeader({
 	const currency = meta.currency ?? "";
 	const currencyStr = currency ? ` ${currency}` : "";
 	const name = meta.shortName ?? symbol;
-
-	const dateRange = `${fmtDate(rows[0]!.timestamp)} 〜 ${fmtDate(rows[rows.length - 1]!.timestamp)}`;
+	const isJpy = currency === "JPY";
+	const digits = isJpy ? 0 : 2;
 
 	return (
 		<div style={{ marginBottom: 2 }}>
 			<div
 				style={{
-					fontSize: "clamp(12px, 1.2vw, 16px)",
+					fontSize: "clamp(14px, 1.2vw, 16px)",
 					color: SUBTEXT_COLOR,
 					marginBottom: 1,
 				}}
@@ -80,8 +72,8 @@ export default function PriceHeader({
 						}}
 					>
 						{latest.toLocaleString(undefined, {
-							minimumFractionDigits: 2,
-							maximumFractionDigits: 2,
+							minimumFractionDigits: digits,
+							maximumFractionDigits: digits,
 						})}
 						{currencyStr}
 					</span>
@@ -115,21 +107,16 @@ export default function PriceHeader({
 				>
 					<span>
 						{sign}
-						{delta.toFixed(2)}
+						{delta.toLocaleString(undefined, {
+							minimumFractionDigits: digits,
+							maximumFractionDigits: digits,
+						})}
 						{currencyStr}&nbsp;({sign}
 						{deltaPct.toFixed(2)}%)
 					</span>
 					<span style={{ fontSize: 12, color: SUBTEXT_COLOR }}>
 						{deltaLabel}
 					</span>
-				</span>
-				<span
-					style={{
-						fontSize: "clamp(10px, 1.0vw, 13px)",
-						color: SUBTEXT_COLOR,
-					}}
-				>
-					{dateRange}
 				</span>
 			</div>
 		</div>

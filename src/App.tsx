@@ -191,6 +191,7 @@ export default function App() {
 								previousClose={data.meta.previousClose}
 								sessionStart={data.meta.regularMarketOpen}
 								sessionEnd={data.meta.regularMarketClose}
+								currency={data.meta.currency}
 							/>
 						</div>
 						<SubMetrics rows={data.rows} meta={data.meta} />

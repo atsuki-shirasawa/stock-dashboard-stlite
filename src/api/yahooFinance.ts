@@ -148,5 +148,6 @@ export async function fetchChart(
 	const meta = parseMeta(result.meta ?? {});
 	const data: ChartData = { rows, meta };
 	setCached(key, data);
+	console.log(data);
 	return data;
 }

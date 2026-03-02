@@ -11,33 +11,36 @@ interface MetricItem {
 	value: string;
 }
 
-function fmt(n: number): string {
+function fmt(n: number, isJpy: boolean): string {
+	const digits = isJpy ? 0 : 2;
 	return n.toLocaleString(undefined, {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
+		minimumFractionDigits: digits,
+		maximumFractionDigits: digits,
 	});
 }
 
 export default function SubMetrics({ rows, meta }: SubMetricsProps) {
 	if (rows.length === 0) return null;
 
+	const isJpy = meta.currency === "JPY";
 	const periodHigh = Math.max(...rows.map((r) => r.high));
 	const periodLow = Math.min(...rows.map((r) => r.low));
 	const latestVolume = rows[rows.length - 1]!.volume;
 
 	const items: MetricItem[] = [
-		{ label: "Period High", value: fmt(periodHigh) },
-		{ label: "Period Low", value: fmt(periodLow) },
+		{ label: "Period High", value: fmt(periodHigh, isJpy) },
+		{ label: "Period Low", value: fmt(periodLow, isJpy) },
 		{ label: "Latest Volume", value: latestVolume.toLocaleString() },
 		{
 			label: "52W High",
-			value: meta.fiftyTwoWeekHigh != null ? fmt(meta.fiftyTwoWeekHigh) : "—",
+			value:
+				meta.fiftyTwoWeekHigh != null ? fmt(meta.fiftyTwoWeekHigh, isJpy) : "—",
 		},
 		{
 			label: "52W Low",
-			value: meta.fiftyTwoWeekLow != null ? fmt(meta.fiftyTwoWeekLow) : "—",
+			value:
+				meta.fiftyTwoWeekLow != null ? fmt(meta.fiftyTwoWeekLow, isJpy) : "—",
 		},
-		{ label: "Currency", value: meta.currency ?? "—" },
 	];
 
 	return (

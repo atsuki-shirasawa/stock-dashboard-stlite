@@ -5,7 +5,8 @@ import createPlotlyComponent from "react-plotly.js/factory";
 import {
 	BG,
 	DOWN_COLOR,
-	DOWN_FILL,
+	DOWN_FILL_GRAD_BOT,
+	DOWN_FILL_GRAD_TOP,
 	FONT_FAMILY,
 	GRID_COLOR,
 	HOVER_BORDER,
@@ -14,7 +15,8 @@ import {
 	SUBTEXT_COLOR,
 	TEXT_COLOR,
 	UP_COLOR,
-	UP_FILL,
+	UP_FILL_GRAD_BOT,
+	UP_FILL_GRAD_TOP,
 	VOL_DOWN,
 	VOL_UP,
 } from "../constants";
@@ -31,6 +33,7 @@ interface StockChartProps {
 	previousClose?: number;
 	sessionStart?: number; // Unix ms — used for 1D x-axis range
 	sessionEnd?: number; // Unix ms — used for 1D x-axis range
+	currency?: string;
 }
 
 /**
@@ -100,6 +103,7 @@ function buildAreaTraces(
 	xs: (string | number)[],
 	symbol: string,
 	previousClose?: number,
+	priceHoverFormat = "%{y:,.2f}",
 ): Data[] {
 	// previousClose: from meta (intraday 1D/1W only)
 	// rows[length-2].close: previous bar's close for daily/weekly/monthly intervals
@@ -108,7 +112,8 @@ function buildAreaTraces(
 	const last = rows[rows.length - 1]?.close ?? 0;
 	const isUp = last >= baseline;
 	const lineColor = isUp ? UP_COLOR : DOWN_COLOR;
-	const fillColor = isUp ? UP_FILL : DOWN_FILL;
+	const gradTop = isUp ? UP_FILL_GRAD_TOP : DOWN_FILL_GRAD_TOP;
+	const gradBot = isUp ? UP_FILL_GRAD_BOT : DOWN_FILL_GRAD_BOT;
 	const base = Math.min(...rows.map((r) => r.close)) * 0.998;
 
 	const baseTrace: Data = {
@@ -127,10 +132,16 @@ function buildAreaTraces(
 		y: rows.map((r) => r.close),
 		mode: "lines",
 		name: symbol,
-		line: { color: lineColor, width: 2 },
+		line: { color: lineColor, width: 1.5 },
 		fill: "tonexty",
-		fillcolor: fillColor,
-		hovertemplate: `<b>%{x}</b><br>Close: %{y:,.2f}<extra>${symbol}</extra>`,
+		fillgradient: {
+			type: "vertical",
+			colorscale: [
+				[0, gradBot],
+				[1, gradTop],
+			],
+		},
+		hovertemplate: `<b>%{x}</b><br>Close: ${priceHoverFormat}<extra>${symbol}</extra>`,
 	} as Data;
 
 	return [baseTrace, areaTrace];
@@ -150,6 +161,14 @@ function buildVolumeTrace(rows: OHLCVRow[], xs: (string | number)[]): Data {
 	} as Data;
 }
 
+function fmtDate(ts: number): string {
+	const d = new Date(ts);
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, "0");
+	const day = String(d.getDate()).padStart(2, "0");
+	return `${y}/${m}/${day}`;
+}
+
 /** Format a Unix-ms timestamp as "YYYY-MM-DD HH:MM:SS" in the browser's local timezone.
  * Plotly.js interprets strings without a timezone suffix as local time. */
 function toLocalDateStr(ts: number): string {
@@ -167,8 +186,13 @@ export default function StockChart({
 	previousClose,
 	sessionStart,
 	sessionEnd,
+	currency,
 }: StockChartProps) {
 	if (rows.length === 0) return null;
+
+	const isJpy = currency === "JPY";
+	const priceTickFormat = isJpy ? ",.0f" : ",.2f";
+	const priceHoverFormat = isJpy ? "%{y:,.0f}" : "%{y:,.2f}";
 
 	// For 1W use categorical x-axis labels to avoid overnight gaps
 	const useCategory = periodLabel === "1W";
@@ -177,7 +201,7 @@ export default function StockChart({
 
 	const priceTraces: Data[] =
 		chartType === "Area"
-			? buildAreaTraces(rows, xs, symbol, previousClose)
+			? buildAreaTraces(rows, xs, symbol, previousClose, priceHoverFormat)
 			: [buildCandlestickTrace(rows, xs, symbol)];
 
 	const traces: Data[] = showVolume
@@ -217,12 +241,20 @@ export default function StockChart({
 		zeroline: false,
 		showspikes: false,
 		tickfont: { color: SUBTEXT_COLOR, size: 11 },
+		tickformat: priceTickFormat,
 		side: "right",
 		title: { text: "" },
 	};
 
+	const dateRangeTitle = `${fmtDate(rows[0]!.timestamp)} 〜 ${fmtDate(rows[rows.length - 1]!.timestamp)}`;
+
 	const layout: Partial<Layout> = {
-		title: { text: "" },
+		title: {
+			text: dateRangeTitle,
+			font: { color: SUBTEXT_COLOR, size: 14, family: FONT_FAMILY },
+			x: 0.01,
+			xanchor: "left",
+		},
 		xaxis: { ...xAxisCommon, ...xAxisExtra, rangeslider: { visible: false } },
 		yaxis: {
 			...yAxisCommon,
@@ -238,7 +270,7 @@ export default function StockChart({
 				}
 			: {}),
 		autosize: true,
-		margin: { t: 8, b: 20, l: 12, r: 60 },
+		margin: { t: 32, b: 32, l: 12, r: 60 },
 		plot_bgcolor: BG,
 		paper_bgcolor: BG,
 		font: { color: TEXT_COLOR, family: FONT_FAMILY, size: 12 },
