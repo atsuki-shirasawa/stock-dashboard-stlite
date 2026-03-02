@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # Stock Dashboard
 
 A client-side stock dashboard built with React + Vite, running entirely in the browser — no server required.
@@ -15,13 +17,13 @@ A client-side stock dashboard built with React + Vite, running entirely in the b
 
 ## URL parameters
 
-| Parameter | Values                                  | Example          |
-| --------- | --------------------------------------- | ---------------- |
-| `symbol`  | Ticker symbol                           | `AAPL`, `7203.T` |
-| `period`  | `1d` `1w` `1mo` `6mo` `1y` `5y` `10y`  | `1y`             |
-| `chart`   | `candlestick` `area`                    | `area`           |
-| `vol`     | `1` to show volume                      | `1`              |
-| `date`    | `YYYY-MM-DD` for historical view        | `2024-01-15`     |
+| Parameter | Values                                | Example          |
+| --------- | ------------------------------------- | ---------------- |
+| `symbol`  | Ticker symbol                         | `AAPL`, `7203.T` |
+| `period`  | `1d` `1w` `1mo` `6mo` `1y` `5y` `10y` | `1y`             |
+| `chart`   | `candlestick` `area`                  | `area`           |
+| `vol`     | `1` to show volume                    | `1`              |
+| `date`    | `YYYY-MM-DD` for historical view      | `2024-01-15`     |
 
 ## Tech stack
 
