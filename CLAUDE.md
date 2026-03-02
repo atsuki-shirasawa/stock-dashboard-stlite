@@ -20,7 +20,7 @@ No test suite exists in this project.
 
 ### Data flow
 
-```
+```text
 URL params (readParams)
   → useState lazy-init in App
   → fetchChart (yahooFinance.ts)
@@ -39,13 +39,13 @@ URL params (readParams)
 
 ### URL params
 
-| Param    | Values                                  | Default  |
-| -------- | --------------------------------------- | -------- |
-| `symbol` | ticker (uppercase)                      | `AAPL`   |
-| `period` | `1d` `1w` `1mo` `6mo` `1y` `5y` `10y`  | `1y`     |
-| `chart`  | `candlestick` `area`                    | `area`   |
-| `vol`    | `1` to show volume subplot              | off      |
-| `date`   | `YYYY-MM-DD` historical end date        | today    |
+| Param    | Values                                 | Default |
+| -------- | -------------------------------------- | ------- |
+| `symbol` | ticker (uppercase)                     | `AAPL`  |
+| `period` | `1d` `1w` `1mo` `6mo` `1y` `5y` `10y` | `1y`    |
+| `chart`  | `candlestick` `area`                   | `area`  |
+| `vol`    | `1` to show volume subplot             | off     |
+| `date`   | `YYYY-MM-DD` historical end date       | today   |
 
 ### Plotly integration
 
