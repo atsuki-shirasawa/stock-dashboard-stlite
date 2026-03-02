@@ -39,13 +39,11 @@ URL params (readParams)
 
 ### URL params
 
-| Param    | Values                                 | Default |
-| -------- | -------------------------------------- | ------- |
-| `symbol` | ticker (uppercase)                     | `AAPL`  |
-| `period` | `1d` `1w` `1mo` `6mo` `1y` `5y` `10y` | `1y`    |
-| `chart`  | `candlestick` `area`                   | `area`  |
-| `vol`    | `1` to show volume subplot             | off     |
-| `date`   | `YYYY-MM-DD` historical end date       | today   |
+- `symbol` — ticker symbol, uppercase (default: `AAPL`)
+- `period` — `1d` `1w` `1mo` `6mo` `1y` `5y` `10y` (default: `1y`)
+- `chart` — `candlestick` or `area` (default: `area`)
+- `vol` — `1` to enable volume subplot
+- `date` — `YYYY-MM-DD` historical end date
 
 ### Plotly integration
 
