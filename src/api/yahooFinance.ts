@@ -145,10 +145,8 @@ export async function fetchChart(
 		}))
 		.filter((r) => !Number.isNaN(r.close));
 
-	const data: ChartData = {
-		rows,
-		meta: parseMeta(result.meta ?? {}),
-	};
+	const meta = parseMeta(result.meta ?? {});
+	const data: ChartData = { rows, meta };
 	setCached(key, data);
 	return data;
 }
