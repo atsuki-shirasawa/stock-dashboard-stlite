@@ -37,21 +37,21 @@ export default function PriceHeader({
   const name = meta.shortName ?? symbol;
 
   return (
-    <div style={{ marginBottom: 4 }}>
+    <div style={{ marginBottom: 2 }}>
       <div
         style={{
-          fontSize: 13,
+          fontSize: 12,
           color: SUBTEXT_COLOR,
-          marginBottom: 2,
+          marginBottom: 1,
           fontFamily: "sans-serif",
         }}
       >
         {name}
       </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
         <span
           style={{
-            fontSize: 32,
+            fontSize: 26,
             fontWeight: 700,
             color: TEXT_COLOR,
             fontFamily: "sans-serif",

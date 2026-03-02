@@ -224,8 +224,8 @@ export default function StockChart({
           },
         }
       : {}),
-    height: 400,
-    margin: { t: 64, b: 24, l: 12, r: 12 },
+    autosize: true,
+    margin: { t: 56, b: 20, l: 12, r: 12 },
     plot_bgcolor: BG,
     paper_bgcolor: BG,
     font: { color: TEXT_COLOR, family: "sans-serif", size: 12 },
@@ -243,7 +243,7 @@ export default function StockChart({
       data={traces}
       layout={layout}
       config={{ responsive: true, displayModeBar: false }}
-      style={{ width: "100%", height: "400px" }}
+      style={{ width: "100%", height: "100%" }}
       useResizeHandler
     />
   );

@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchChart } from "./api/yahooFinance";
-import ChartTypeSelector from "./components/ChartTypeSelector";
 import PeriodSelector from "./components/PeriodSelector";
 import PriceHeader from "./components/PriceHeader";
-import SearchBar from "./components/SearchBar";
 import StockChart from "./components/StockChart";
 import SubMetrics from "./components/SubMetrics";
 import {
@@ -13,7 +11,6 @@ import {
   DEFAULT_CHART,
   DEFAULT_PERIOD,
   DEFAULT_SYMBOL,
-  PANEL_BG,
   PERIOD_FROM_KEY,
   PERIOD_TO_KEY,
   SUBTEXT_COLOR,
@@ -69,11 +66,11 @@ function writeParams(
 // ── App ───────────────────────────────────────────────────────────────
 export default function App() {
   const init = readParams();
-  const [symbol, setSymbol] = useState(init.symbol);
+  const [symbol] = useState(init.symbol);
   const [period, setPeriod] = useState(init.period);
-  const [chartType, setChartType] = useState<ChartType>(init.chartType);
+  const [chartType] = useState<ChartType>(init.chartType);
   const [endDate] = useState<Date | undefined>(init.endDate);
-  const [showVolume, setShowVolume] = useState(init.showVolume);
+  const [showVolume] = useState(init.showVolume);
 
   const [data, setData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,66 +113,31 @@ export default function App() {
     writeParams(symbol, period, chartType, endDate, showVolume);
   }, [symbol, period, chartType, endDate, showVolume]);
 
-  function handleSymbol(s: string) {
-    setSymbol(s);
-  }
-  function handlePeriod(p: string) {
-    setPeriod(p);
-  }
-  function handleChartType(ct: ChartType) {
-    setChartType(ct);
-  }
-
   return (
     <div
       style={{
-        minHeight: "100vh",
+        height: "100vh",
         background: BG,
         color: TEXT_COLOR,
         fontFamily: "sans-serif",
-        padding: "0 0 40px",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
       }}
     >
-      {/* Header bar */}
+      {/* Content */}
       <div
         style={{
-          background: PANEL_BG,
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
-          padding: "12px 24px",
+          padding: "8px 16px 0",
+          flex: 1,
           display: "flex",
-          alignItems: "center",
-          gap: 16,
-          flexWrap: "wrap",
+          flexDirection: "column",
+          overflow: "hidden",
+          minHeight: 0,
         }}
       >
-        <span style={{ fontSize: 18, fontWeight: 700 }}>📈 Stock Dashboard</span>
-        <SearchBar value={symbol} onSubmit={handleSymbol} />
-        <PeriodSelector value={period} onChange={handlePeriod} />
-        <ChartTypeSelector value={chartType} onChange={handleChartType} />
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 13,
-            color: SUBTEXT_COLOR,
-            cursor: "pointer",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={showVolume}
-            onChange={(e) => setShowVolume(e.target.checked)}
-            style={{ accentColor: "#00d4a0" }}
-          />
-          Volume
-        </label>
-      </div>
-
-      {/* Content */}
-      <div style={{ padding: "20px 24px 0" }}>
         {loading && (
-          <div style={{ color: SUBTEXT_COLOR, fontSize: 14, padding: "40px 0" }}>
+          <div style={{ color: SUBTEXT_COLOR, fontSize: 14, padding: "20px 0" }}>
             Fetching data for {symbol}…
           </div>
         )}
@@ -189,7 +151,7 @@ export default function App() {
               borderRadius: 8,
               padding: "12px 16px",
               fontSize: 14,
-              marginBottom: 16,
+              marginBottom: 8,
             }}
           >
             {error}
@@ -198,23 +160,29 @@ export default function App() {
 
         {data && !loading && (
           <>
-            <PriceHeader
-              symbol={symbol}
-              meta={data.meta}
-              rows={data.rows}
-              periodLabel={period}
-            />
-            <StockChart
-              rows={data.rows}
-              symbol={symbol}
-              periodLabel={period}
-              chartType={chartType}
-              showVolume={showVolume}
-            />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <PriceHeader
+                symbol={symbol}
+                meta={data.meta}
+                rows={data.rows}
+                periodLabel={period}
+              />
+              <PeriodSelector value={period} onChange={setPeriod} />
+            </div>
+            <div style={{ flex: 1, minHeight: 0, maxHeight: 560 }}>
+              <StockChart
+                rows={data.rows}
+                symbol={symbol}
+                periodLabel={period}
+                chartType={chartType}
+                showVolume={showVolume}
+              />
+            </div>
             <SubMetrics rows={data.rows} meta={data.meta} />
           </>
         )}
       </div>
+
     </div>
   );
 }

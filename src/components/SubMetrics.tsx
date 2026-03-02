@@ -41,8 +41,8 @@ export default function SubMetrics({ rows, meta }: SubMetricsProps) {
       style={{
         display: "flex",
         flexWrap: "wrap",
-        gap: "20px 32px",
-        padding: "14px 4px",
+        gap: "8px 24px",
+        padding: "6px 4px 4px",
         borderTop: "1px solid rgba(255,255,255,0.07)",
       }}
     >
