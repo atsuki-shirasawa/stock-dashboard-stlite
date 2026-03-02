@@ -103,7 +103,8 @@ function buildAreaTraces(
 ): Data[] {
 	// previousClose: from meta (intraday 1D/1W only)
 	// rows[length-2].close: previous bar's close for daily/weekly/monthly intervals
-	const baseline = previousClose ?? rows[rows.length - 2]?.close ?? rows[0]?.close ?? 0;
+	const baseline =
+		previousClose ?? rows[rows.length - 2]?.close ?? rows[0]?.close ?? 0;
 	const last = rows[rows.length - 1]?.close ?? 0;
 	const isUp = last >= baseline;
 	const lineColor = isUp ? UP_COLOR : DOWN_COLOR;

@@ -170,16 +170,16 @@ export default function App() {
 								periodLabel={period}
 							/>
 							<PeriodSelector
-							value={period}
-							onChange={setPeriod}
-							isUp={
-								(data.rows[data.rows.length - 1]?.close ?? 0) >=
-								(data.meta.previousClose ??
-									data.rows[data.rows.length - 2]?.close ??
-									data.rows[0]?.close ??
-									0)
-							}
-						/>
+								value={period}
+								onChange={setPeriod}
+								isUp={
+									(data.rows[data.rows.length - 1]?.close ?? 0) >=
+									(data.meta.previousClose ??
+										data.rows[data.rows.length - 2]?.close ??
+										data.rows[0]?.close ??
+										0)
+								}
+							/>
 						</div>
 						<div style={{ flex: 1, minHeight: 0, maxHeight: 560 }}>
 							<StockChart
