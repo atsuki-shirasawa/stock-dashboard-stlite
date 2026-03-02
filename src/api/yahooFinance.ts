@@ -11,6 +11,24 @@ const YF_HEADERS = {
 	Accept: "application/json",
 };
 
+interface YfQuote {
+	open?: (number | null)[];
+	high?: (number | null)[];
+	low?: (number | null)[];
+	close?: (number | null)[];
+	volume?: (number | null)[];
+}
+
+interface YfResult {
+	timestamp?: number[];
+	indicators?: { quote?: YfQuote[] };
+	meta?: Record<string, unknown>;
+}
+
+interface YfResponse {
+	chart?: { result?: YfResult[] };
+}
+
 function buildYfUrl(
 	symbol: string,
 	periodLabel: string,
@@ -39,7 +57,7 @@ function parseMeta(meta: Record<string, unknown>): StockMeta {
 			(meta.shortName as string | undefined) ||
 			(meta.longName as string | undefined),
 		previousClose:
-			(meta.chartPreviousClose as number | undefined) ||
+			(meta.chartPreviousClose as number | undefined) ??
 			(meta.previousClose as number | undefined),
 		currency: meta.currency as string | undefined,
 		fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh as number | undefined,
@@ -96,21 +114,6 @@ export async function fetchChart(
 		throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
 	}
 
-	interface YfQuote {
-		open?: (number | null)[];
-		high?: (number | null)[];
-		low?: (number | null)[];
-		close?: (number | null)[];
-		volume?: (number | null)[];
-	}
-	interface YfResult {
-		timestamp?: number[];
-		indicators?: { quote?: YfQuote[] };
-		meta?: Record<string, unknown>;
-	}
-	interface YfResponse {
-		chart?: { result?: YfResult[] };
-	}
 	const json = (await resp.json()) as YfResponse;
 	const chartResults = json?.chart?.result;
 	if (!Array.isArray(chartResults) || chartResults.length === 0) {

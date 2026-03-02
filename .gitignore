@@ -1,18 +1,3 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
-
 # Node.js
 node_modules/
 dist/
-
-# Scratch files
-hoge.py
-index copy.html

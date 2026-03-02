@@ -8,6 +8,7 @@ import {
 	DOWN_FILL,
 	FONT_FAMILY,
 	GRID_COLOR,
+	HOVER_BORDER,
 	PANEL_BG,
 	SPIKE_COLOR,
 	SUBTEXT_COLOR,
@@ -19,7 +20,6 @@ import {
 } from "../constants";
 import type { ChartType, OHLCVRow } from "../types/stock";
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 const Plot = createPlotlyComponent(PlotlyInstance);
 
 interface StockChartProps {
@@ -88,7 +88,7 @@ function buildCandlestickTrace(
 			fillcolor: DOWN_COLOR,
 		},
 		name: symbol,
-		hoverlabel: { bgcolor: PANEL_BG, bordercolor: "rgba(100,116,139,0.20)" },
+		hoverlabel: { bgcolor: PANEL_BG, bordercolor: HOVER_BORDER },
 	} as Data;
 }
 
@@ -222,7 +222,7 @@ export default function StockChart({
 		hovermode: "x unified",
 		hoverlabel: {
 			bgcolor: PANEL_BG,
-			bordercolor: "rgba(100,116,139,0.20)",
+			bordercolor: HOVER_BORDER,
 			font: { color: TEXT_COLOR, size: 12, family: FONT_FAMILY },
 		},
 		showlegend: false,

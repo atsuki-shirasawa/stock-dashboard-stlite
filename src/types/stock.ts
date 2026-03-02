@@ -21,4 +21,3 @@ export interface ChartData {
 }
 
 export type ChartType = "Candlestick" | "Area";
-export type PeriodLabel = "1D" | "1W" | "1M" | "6M" | "1Y" | "5Y" | "10Y";

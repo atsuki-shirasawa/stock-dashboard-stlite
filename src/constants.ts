@@ -9,6 +9,7 @@ export const VOL_UP = "rgba(16,185,129,0.40)";
 export const VOL_DOWN = "rgba(239,68,68,0.40)";
 export const GRID_COLOR = "rgba(148,163,184,0.20)";
 export const SPIKE_COLOR = "rgba(100,116,139,0.40)";
+export const HOVER_BORDER = "rgba(100,116,139,0.20)";
 export const ERROR_BG = "rgba(239,68,68,0.08)";
 export const ERROR_BORDER = "rgba(239,68,68,0.25)";
 export const TEXT_COLOR = "#0f172a";
@@ -61,7 +62,6 @@ export const PERIOD_FROM_KEY: Record<string, string> = Object.fromEntries(
 	Object.entries(PERIOD_TO_KEY).map(([k, v]) => [v, k]),
 );
 
-export const CHART_TYPES = ["Candlestick", "Area"] as const;
 export const CHART_TO_KEY: Record<string, string> = {
 	Candlestick: "candlestick",
 	Area: "area",

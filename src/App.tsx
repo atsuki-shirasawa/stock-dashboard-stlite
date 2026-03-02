@@ -119,7 +119,6 @@ export default function App() {
 				overflow: "hidden",
 			}}
 		>
-			{/* Content */}
 			<div
 				style={{
 					padding: "20px 16px 20px",
