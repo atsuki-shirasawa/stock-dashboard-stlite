@@ -169,7 +169,17 @@ export default function App() {
 								rows={data.rows}
 								periodLabel={period}
 							/>
-							<PeriodSelector value={period} onChange={setPeriod} />
+							<PeriodSelector
+							value={period}
+							onChange={setPeriod}
+							isUp={
+								(data.rows[data.rows.length - 1]?.close ?? 0) >=
+								(data.meta.previousClose ??
+									data.rows[data.rows.length - 2]?.close ??
+									data.rows[0]?.close ??
+									0)
+							}
+						/>
 						</div>
 						<div style={{ flex: 1, minHeight: 0, maxHeight: 560 }}>
 							<StockChart
@@ -178,6 +188,9 @@ export default function App() {
 								periodLabel={period}
 								chartType={chartType}
 								showVolume={showVolume}
+								previousClose={data.meta.previousClose}
+								sessionStart={data.meta.regularMarketOpen}
+								sessionEnd={data.meta.regularMarketClose}
 							/>
 						</div>
 						<SubMetrics rows={data.rows} meta={data.meta} />

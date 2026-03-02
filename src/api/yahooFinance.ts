@@ -52,16 +52,21 @@ function buildYfUrl(
 }
 
 function parseMeta(meta: Record<string, unknown>): StockMeta {
+	const regular = (
+		meta.currentTradingPeriod as
+			| { regular?: { start?: number; end?: number } }
+			| undefined
+	)?.regular;
 	return {
 		shortName:
 			(meta.shortName as string | undefined) ||
 			(meta.longName as string | undefined),
-		previousClose:
-			(meta.chartPreviousClose as number | undefined) ??
-			(meta.previousClose as number | undefined),
+		previousClose: meta.previousClose as number | undefined,
 		currency: meta.currency as string | undefined,
 		fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh as number | undefined,
 		fiftyTwoWeekLow: meta.fiftyTwoWeekLow as number | undefined,
+		regularMarketOpen: regular?.start ? regular.start * 1000 : undefined,
+		regularMarketClose: regular?.end ? regular.end * 1000 : undefined,
 	};
 }
 

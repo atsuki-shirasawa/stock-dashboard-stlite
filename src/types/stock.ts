@@ -4,6 +4,8 @@ export interface StockMeta {
 	currency?: string;
 	fiftyTwoWeekHigh?: number;
 	fiftyTwoWeekLow?: number;
+	regularMarketOpen?: number; // Unix ms — trading session start
+	regularMarketClose?: number; // Unix ms — trading session end
 }
 
 export interface OHLCVRow {

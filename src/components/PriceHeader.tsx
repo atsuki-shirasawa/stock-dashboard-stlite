@@ -36,17 +36,21 @@ export default function PriceHeader({
 	const latest = rows[rows.length - 1]!.close;
 	const deltaLabel = DELTA_LABELS[periodLabel] ?? "vs prev day";
 
-	let prev: number;
-	if (periodLabel === "1D") {
-		prev = meta.previousClose ?? rows[0]!.close;
-	} else {
-		prev = rows[0]!.close;
-	}
+	// Period-based baseline: arrow direction, delta value, label (original behavior)
+	const prevPeriod =
+		periodLabel === "1D"
+			? (meta.previousClose ?? rows[0]!.close)
+			: rows[0]!.close;
 
-	const delta = latest - prev;
-	const deltaPct = prev !== 0 ? (delta / prev) * 100 : 0;
+	// Color-only baseline: matches chart area color (same as StockChart)
+	const prevColor =
+		meta.previousClose ?? rows[rows.length - 2]?.close ?? rows[0]!.close;
+
+	const delta = latest - prevPeriod;
+	const deltaPct = prevPeriod !== 0 ? (delta / prevPeriod) * 100 : 0;
 	const isUp = delta >= 0;
-	const color = isUp ? UP_COLOR : DOWN_COLOR;
+	const isUpColor = latest >= prevColor;
+	const color = isUpColor ? UP_COLOR : DOWN_COLOR;
 	const sign = isUp ? "+" : "";
 
 	const currency = meta.currency ?? "";
@@ -89,7 +93,7 @@ export default function PriceHeader({
 							width: 28,
 							height: 28,
 							borderRadius: 8,
-							background: isUp ? UP_FILL : DOWN_FILL,
+							background: isUpColor ? UP_FILL : DOWN_FILL,
 							flexShrink: 0,
 						}}
 					>

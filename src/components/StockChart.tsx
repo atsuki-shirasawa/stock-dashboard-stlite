@@ -28,6 +28,9 @@ interface StockChartProps {
 	periodLabel: string;
 	chartType: ChartType;
 	showVolume: boolean;
+	previousClose?: number;
+	sessionStart?: number; // Unix ms — used for 1D x-axis range
+	sessionEnd?: number; // Unix ms — used for 1D x-axis range
 }
 
 /**
@@ -96,10 +99,13 @@ function buildAreaTraces(
 	rows: OHLCVRow[],
 	xs: (string | number)[],
 	symbol: string,
+	previousClose?: number,
 ): Data[] {
-	const first = rows[0]?.close ?? 0;
+	// previousClose: from meta (intraday 1D/1W only)
+	// rows[length-2].close: previous bar's close for daily/weekly/monthly intervals
+	const baseline = previousClose ?? rows[rows.length - 2]?.close ?? rows[0]?.close ?? 0;
 	const last = rows[rows.length - 1]?.close ?? 0;
-	const isUp = last >= first;
+	const isUp = last >= baseline;
 	const lineColor = isUp ? UP_COLOR : DOWN_COLOR;
 	const fillColor = isUp ? UP_FILL : DOWN_FILL;
 	const base = Math.min(...rows.map((r) => r.close)) * 0.998;
@@ -157,6 +163,9 @@ export default function StockChart({
 	periodLabel,
 	chartType,
 	showVolume,
+	previousClose,
+	sessionStart,
+	sessionEnd,
 }: StockChartProps) {
 	if (rows.length === 0) return null;
 
@@ -167,7 +176,7 @@ export default function StockChart({
 
 	const priceTraces: Data[] =
 		chartType === "Area"
-			? buildAreaTraces(rows, xs, symbol)
+			? buildAreaTraces(rows, xs, symbol, previousClose)
 			: [buildCandlestickTrace(rows, xs, symbol)];
 
 	const traces: Data[] = showVolume
@@ -185,9 +194,22 @@ export default function StockChart({
 		tickfont: { color: SUBTEXT_COLOR, size: 11 },
 	};
 
+	// For 1D: fix x-axis to the full trading session so the right side doesn't
+	// collapse to the last data point during an active trading day.
+	const sessionRange =
+		periodLabel === "1D" && sessionStart && sessionEnd
+			? ([toLocalDateStr(sessionStart), toLocalDateStr(sessionEnd)] as [
+					string,
+					string,
+				])
+			: undefined;
+
 	const xAxisExtra: Partial<LayoutAxis> = useCategory
 		? { type: "category", nticks: 6 }
-		: { rangebreaks: getRangebreaks(rows, periodLabel) };
+		: {
+				rangebreaks: getRangebreaks(rows, periodLabel),
+				...(sessionRange ? { range: sessionRange } : {}),
+			};
 
 	const yAxisCommon: Partial<LayoutAxis> = {
 		gridcolor: GRID_COLOR,
