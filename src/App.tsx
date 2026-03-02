@@ -11,6 +11,7 @@ import {
   DEFAULT_CHART,
   DEFAULT_PERIOD,
   DEFAULT_SYMBOL,
+  FONT_FAMILY,
   PERIOD_FROM_KEY,
   PERIOD_TO_KEY,
   SUBTEXT_COLOR,
@@ -119,7 +120,7 @@ export default function App() {
         height: "100vh",
         background: BG,
         color: TEXT_COLOR,
-        fontFamily: "sans-serif",
+        fontFamily: FONT_FAMILY,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
@@ -128,7 +129,7 @@ export default function App() {
       {/* Content */}
       <div
         style={{
-          padding: "8px 16px 0",
+          padding: "20px 16px 20px",
           flex: 1,
           display: "flex",
           flexDirection: "column",
@@ -145,9 +146,9 @@ export default function App() {
         {error && !loading && (
           <div
             style={{
-              color: "#f43f5e",
-              background: "rgba(244,63,94,0.10)",
-              border: "1px solid rgba(244,63,94,0.30)",
+              color: "#ef4444",
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.25)",
               borderRadius: 8,
               padding: "12px 16px",
               fontSize: 14,

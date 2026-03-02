@@ -1,16 +1,17 @@
-// Color theme (1:1 with Python version)
-export const BG = "#0d1117";
-export const PANEL_BG = "#161b22";
-export const UP_COLOR = "#00d4a0";
-export const DOWN_COLOR = "#f43f5e";
-export const UP_FILL = "rgba(0,212,160,0.20)";
-export const DOWN_FILL = "rgba(244,63,94,0.20)";
-export const VOL_UP = "rgba(0,212,160,0.50)";
-export const VOL_DOWN = "rgba(244,63,94,0.50)";
-export const GRID_COLOR = "rgba(255,255,255,0.05)";
-export const SPIKE_COLOR = "rgba(255,255,255,0.25)";
-export const TEXT_COLOR = "#c9d1d9";
-export const SUBTEXT_COLOR = "#8b949e";
+// Color theme — light mode
+export const BG = "#f8fafc";
+export const PANEL_BG = "#ffffff";
+export const UP_COLOR = "#10b981";
+export const DOWN_COLOR = "#ef4444";
+export const UP_FILL = "rgba(16,185,129,0.12)";
+export const DOWN_FILL = "rgba(239,68,68,0.10)";
+export const VOL_UP = "rgba(16,185,129,0.40)";
+export const VOL_DOWN = "rgba(239,68,68,0.40)";
+export const GRID_COLOR = "rgba(148,163,184,0.20)";
+export const SPIKE_COLOR = "rgba(100,116,139,0.40)";
+export const TEXT_COLOR = "#0f172a";
+export const SUBTEXT_COLOR = "#64748b";
+export const FONT_FAMILY = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 // Period config (1:1 with Python version)
 export const PERIODS: Record<string, { period: string; interval: string }> = {

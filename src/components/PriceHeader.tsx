@@ -1,4 +1,5 @@
-import { DELTA_LABELS, DOWN_COLOR, SUBTEXT_COLOR, TEXT_COLOR, UP_COLOR } from "../constants";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { DELTA_LABELS, DOWN_COLOR, FONT_FAMILY, SUBTEXT_COLOR, TEXT_COLOR, UP_COLOR } from "../constants";
 import type { OHLCVRow, StockMeta } from "../types/stock";
 
 interface PriceHeaderProps {
@@ -36,37 +37,62 @@ export default function PriceHeader({
   const currencyStr = currency ? ` ${currency}` : "";
   const name = meta.shortName ?? symbol;
 
+  const fmtDate = (ts: number) => {
+    const d = new Date(ts);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}/${m}/${day}`;
+  };
+  const dateRange = `${fmtDate(rows[0]!.timestamp)} 〜 ${fmtDate(rows[rows.length - 1]!.timestamp)}`;
+
   return (
     <div style={{ marginBottom: 2 }}>
       <div
         style={{
-          fontSize: 12,
+          fontSize: "clamp(12px, 1.2vw, 16px)",
           color: SUBTEXT_COLOR,
           marginBottom: 1,
-          fontFamily: "sans-serif",
+          fontFamily: FONT_FAMILY,
         }}
       >
         {name}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <span
-          style={{
-            fontSize: "clamp(18px, 2.4vw, 32px)",
-            fontWeight: 700,
-            color: TEXT_COLOR,
-            fontFamily: "sans-serif",
-          }}
-        >
-          {latest.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          {currencyStr}
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{
+              fontSize: "clamp(18px, 2.4vw, 32px)",
+              fontWeight: 700,
+              color: TEXT_COLOR,
+              fontFamily: FONT_FAMILY,
+            }}
+          >
+            {latest.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {currencyStr}
+          </span>
+          <span style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 28,
+            height: 28,
+            borderRadius: 8,
+            background: isUp ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.10)",
+            flexShrink: 0,
+          }}>
+            {isUp
+              ? <ArrowUp size={16} strokeWidth={2.5} color={color} />
+              : <ArrowDown size={16} strokeWidth={2.5} color={color} />}
+          </span>
         </span>
-        <span style={{ fontSize: "clamp(11px, 1.2vw, 14px)", color, fontFamily: "sans-serif" }}>
-          {sign}
-          {delta.toFixed(2)}
-          {currencyStr}&nbsp;({sign}
-          {deltaPct.toFixed(2)}%)&nbsp;
+        <span style={{ fontSize: "clamp(11px, 1.2vw, 14px)", color, fontFamily: FONT_FAMILY, display: "flex", alignItems: "center", gap: 4 }}>
+          <span>
+            {sign}{delta.toFixed(2)}{currencyStr}&nbsp;({sign}{deltaPct.toFixed(2)}%)
+          </span>
           <span style={{ fontSize: 12, color: SUBTEXT_COLOR }}>{deltaLabel}</span>
         </span>
+        <span style={{ fontSize: "clamp(10px, 1.0vw, 13px)", color: SUBTEXT_COLOR, fontFamily: FONT_FAMILY }}>{dateRange}</span>
       </div>
     </div>
   );

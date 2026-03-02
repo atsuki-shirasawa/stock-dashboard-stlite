@@ -1,4 +1,4 @@
-import { PERIODS, SUBTEXT_COLOR, TEXT_COLOR, UP_COLOR } from "../constants";
+import { FONT_FAMILY, PERIODS, SUBTEXT_COLOR, TEXT_COLOR, UP_COLOR } from "../constants";
 
 const PERIOD_LABELS = Object.keys(PERIODS) as string[];
 
@@ -17,14 +17,14 @@ export default function PeriodSelector({ value, onChange }: PeriodSelectorProps)
             key={label}
             onClick={() => onChange(label)}
             style={{
-              background: active ? "rgba(255,255,255,0.10)" : "transparent",
+              background: active ? `rgba(16,185,129,0.10)` : "transparent",
               border: active
                 ? `1px solid ${UP_COLOR}`
-                : "1px solid rgba(255,255,255,0.10)",
+                : "1px solid rgba(100,116,139,0.20)",
               borderRadius: 6,
               color: active ? TEXT_COLOR : SUBTEXT_COLOR,
               cursor: "pointer",
-              fontFamily: "sans-serif",
+              fontFamily: FONT_FAMILY,
               fontSize: 13,
               fontWeight: active ? 600 : 400,
               padding: "5px 10px",

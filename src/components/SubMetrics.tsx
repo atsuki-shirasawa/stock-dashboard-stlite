@@ -1,4 +1,4 @@
-import { SUBTEXT_COLOR, TEXT_COLOR } from "../constants";
+import { FONT_FAMILY, SUBTEXT_COLOR, TEXT_COLOR } from "../constants";
 import type { OHLCVRow, StockMeta } from "../types/stock";
 
 interface SubMetricsProps {
@@ -43,7 +43,7 @@ export default function SubMetrics({ rows, meta }: SubMetricsProps) {
         flexWrap: "wrap",
         gap: "8px 24px",
         padding: "6px 4px 4px",
-        borderTop: "1px solid rgba(255,255,255,0.07)",
+        borderTop: "1px solid rgba(100,116,139,0.15)",
       }}
     >
       {items.map(({ label, value }) => (
@@ -61,7 +61,7 @@ export default function SubMetrics({ rows, meta }: SubMetricsProps) {
               fontSize: 11,
               color: SUBTEXT_COLOR,
               whiteSpace: "nowrap",
-              fontFamily: "sans-serif",
+              fontFamily: FONT_FAMILY,
             }}
           >
             {label}
@@ -72,7 +72,7 @@ export default function SubMetrics({ rows, meta }: SubMetricsProps) {
               color: TEXT_COLOR,
               fontWeight: 500,
               whiteSpace: "nowrap",
-              fontFamily: "sans-serif",
+              fontFamily: FONT_FAMILY,
             }}
           >
             {value}
