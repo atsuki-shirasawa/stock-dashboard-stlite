@@ -4,7 +4,7 @@
 
 A client-side stock dashboard built with React + Vite, running entirely in the browser — no server required.
 
-**Live demo:** <https://atsuki-shirasawa.github.io/stock-dashboad-streamlit/>
+**Live demo:** <https://atsuki-shirasawa.github.io/stock-dashboard-stlite/>
 
 ## Features
 
