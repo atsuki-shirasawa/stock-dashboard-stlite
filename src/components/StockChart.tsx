@@ -17,7 +17,7 @@ import {
 	VOL_DOWN,
 	VOL_UP,
 } from "../constants";
-import type { OHLCVRow } from "../types/stock";
+import type { ChartType, OHLCVRow } from "../types/stock";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 const Plot = createPlotlyComponent(PlotlyInstance);
@@ -26,7 +26,7 @@ interface StockChartProps {
 	rows: OHLCVRow[];
 	symbol: string;
 	periodLabel: string;
-	chartType: "Candlestick" | "Area";
+	chartType: ChartType;
 	showVolume: boolean;
 }
 
@@ -123,8 +123,7 @@ function buildAreaTraces(
 		line: { color: lineColor, width: 2 },
 		fill: "tonexty",
 		fillcolor: fillColor,
-		hovertemplate:
-			"<b>%{x}</b><br>Close: %{y:,.2f}<extra>" + symbol + "</extra>",
+		hovertemplate: `<b>%{x}</b><br>Close: %{y:,.2f}<extra>${symbol}</extra>`,
 	} as Data;
 
 	return [baseTrace, areaTrace];
