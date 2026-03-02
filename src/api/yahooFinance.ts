@@ -84,13 +84,14 @@ export async function fetchChart(
 	symbol: string,
 	periodLabel: string,
 	endDate?: Date,
+	signal?: AbortSignal,
 ): Promise<ChartData> {
 	const key = cacheKey(symbol, periodLabel, endDate);
 	const cached = getCached(key);
 	if (cached) return cached;
 
 	const url = buildYfUrl(symbol, periodLabel, endDate);
-	const resp = await fetch(url, { headers: YF_HEADERS });
+	const resp = await fetch(url, { headers: YF_HEADERS, signal });
 	if (!resp.ok) {
 		throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
 	}

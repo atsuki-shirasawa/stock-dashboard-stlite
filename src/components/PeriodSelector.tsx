@@ -1,10 +1,4 @@
-import {
-	FONT_FAMILY,
-	PERIODS,
-	SUBTEXT_COLOR,
-	TEXT_COLOR,
-	UP_COLOR,
-} from "../constants";
+import { PERIODS, SUBTEXT_COLOR, TEXT_COLOR, UP_COLOR } from "../constants";
 
 const PERIOD_LABELS = Object.keys(PERIODS) as string[];
 
@@ -34,7 +28,6 @@ export default function PeriodSelector({
 							borderRadius: 6,
 							color: active ? TEXT_COLOR : SUBTEXT_COLOR,
 							cursor: "pointer",
-							fontFamily: FONT_FAMILY,
 							fontSize: 13,
 							fontWeight: active ? 600 : 400,
 							padding: "5px 10px",

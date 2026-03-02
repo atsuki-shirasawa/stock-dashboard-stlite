@@ -1,4 +1,4 @@
-import { FONT_FAMILY, SUBTEXT_COLOR, TEXT_COLOR } from "../constants";
+import { SUBTEXT_COLOR, TEXT_COLOR } from "../constants";
 import type { OHLCVRow, StockMeta } from "../types/stock";
 
 interface SubMetricsProps {
@@ -11,18 +11,19 @@ interface MetricItem {
 	value: string;
 }
 
+function fmt(n: number): string {
+	return n.toLocaleString(undefined, {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
+}
+
 export default function SubMetrics({ rows, meta }: SubMetricsProps) {
 	if (rows.length === 0) return null;
 
 	const periodHigh = Math.max(...rows.map((r) => r.high));
 	const periodLow = Math.min(...rows.map((r) => r.low));
 	const latestVolume = rows[rows.length - 1]!.volume;
-
-	const fmt = (n: number) =>
-		n.toLocaleString(undefined, {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2,
-		});
 
 	const items: MetricItem[] = [
 		{ label: "Period High", value: fmt(periodHigh) },
@@ -64,7 +65,6 @@ export default function SubMetrics({ rows, meta }: SubMetricsProps) {
 							fontSize: 11,
 							color: SUBTEXT_COLOR,
 							whiteSpace: "nowrap",
-							fontFamily: FONT_FAMILY,
 						}}
 					>
 						{label}
@@ -75,7 +75,6 @@ export default function SubMetrics({ rows, meta }: SubMetricsProps) {
 							color: TEXT_COLOR,
 							fontWeight: 500,
 							whiteSpace: "nowrap",
-							fontFamily: FONT_FAMILY,
 						}}
 					>
 						{value}

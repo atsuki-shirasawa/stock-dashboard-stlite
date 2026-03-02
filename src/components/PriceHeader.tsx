@@ -2,10 +2,11 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import {
 	DELTA_LABELS,
 	DOWN_COLOR,
-	FONT_FAMILY,
+	DOWN_FILL,
 	SUBTEXT_COLOR,
 	TEXT_COLOR,
 	UP_COLOR,
+	UP_FILL,
 } from "../constants";
 import type { OHLCVRow, StockMeta } from "../types/stock";
 
@@ -14,6 +15,14 @@ interface PriceHeaderProps {
 	meta: StockMeta;
 	rows: OHLCVRow[];
 	periodLabel: string;
+}
+
+function fmtDate(ts: number): string {
+	const d = new Date(ts);
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, "0");
+	const day = String(d.getDate()).padStart(2, "0");
+	return `${y}/${m}/${day}`;
 }
 
 export default function PriceHeader({
@@ -44,13 +53,6 @@ export default function PriceHeader({
 	const currencyStr = currency ? ` ${currency}` : "";
 	const name = meta.shortName ?? symbol;
 
-	const fmtDate = (ts: number) => {
-		const d = new Date(ts);
-		const y = d.getFullYear();
-		const m = String(d.getMonth() + 1).padStart(2, "0");
-		const day = String(d.getDate()).padStart(2, "0");
-		return `${y}/${m}/${day}`;
-	};
 	const dateRange = `${fmtDate(rows[0]!.timestamp)} 〜 ${fmtDate(rows[rows.length - 1]!.timestamp)}`;
 
 	return (
@@ -60,7 +62,6 @@ export default function PriceHeader({
 					fontSize: "clamp(12px, 1.2vw, 16px)",
 					color: SUBTEXT_COLOR,
 					marginBottom: 1,
-					fontFamily: FONT_FAMILY,
 				}}
 			>
 				{name}
@@ -72,7 +73,6 @@ export default function PriceHeader({
 							fontSize: "clamp(18px, 2.4vw, 32px)",
 							fontWeight: 700,
 							color: TEXT_COLOR,
-							fontFamily: FONT_FAMILY,
 						}}
 					>
 						{latest.toLocaleString(undefined, {
@@ -89,9 +89,7 @@ export default function PriceHeader({
 							width: 28,
 							height: 28,
 							borderRadius: 8,
-							background: isUp
-								? "rgba(16,185,129,0.12)"
-								: "rgba(239,68,68,0.10)",
+							background: isUp ? UP_FILL : DOWN_FILL,
 							flexShrink: 0,
 						}}
 					>
@@ -106,7 +104,6 @@ export default function PriceHeader({
 					style={{
 						fontSize: "clamp(11px, 1.2vw, 14px)",
 						color,
-						fontFamily: FONT_FAMILY,
 						display: "flex",
 						alignItems: "center",
 						gap: 4,
@@ -126,7 +123,6 @@ export default function PriceHeader({
 					style={{
 						fontSize: "clamp(10px, 1.0vw, 13px)",
 						color: SUBTEXT_COLOR,
-						fontFamily: FONT_FAMILY,
 					}}
 				>
 					{dateRange}

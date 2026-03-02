@@ -11,7 +11,9 @@ import {
 	DEFAULT_CHART,
 	DEFAULT_PERIOD,
 	DEFAULT_SYMBOL,
-	FONT_FAMILY,
+	DOWN_COLOR,
+	ERROR_BG,
+	ERROR_BORDER,
 	PERIOD_FROM_KEY,
 	PERIOD_TO_KEY,
 	SUBTEXT_COLOR,
@@ -82,7 +84,7 @@ export default function App() {
 		setLoading(true);
 		setError(null);
 		try {
-			const result = await fetchChart(sym, per, ed);
+			const result = await fetchChart(sym, per, ed, abortRef.current.signal);
 			if (result.rows.length === 0) {
 				setError(`No data found for ${sym}. Please check the ticker symbol.`);
 				setData(null);
@@ -112,7 +114,6 @@ export default function App() {
 				height: "100vh",
 				background: BG,
 				color: TEXT_COLOR,
-				fontFamily: FONT_FAMILY,
 				display: "flex",
 				flexDirection: "column",
 				overflow: "hidden",
@@ -140,9 +141,9 @@ export default function App() {
 				{error && !loading && (
 					<div
 						style={{
-							color: "#ef4444",
-							background: "rgba(239,68,68,0.08)",
-							border: "1px solid rgba(239,68,68,0.25)",
+							color: DOWN_COLOR,
+							background: ERROR_BG,
+							border: `1px solid ${ERROR_BORDER}`,
 							borderRadius: 8,
 							padding: "12px 16px",
 							fontSize: 14,
