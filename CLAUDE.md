@@ -34,7 +34,7 @@ URL params (readParams)
 
 - `src/constants.ts` — all color tokens, period config, URL param key mappings, cache TTL
 - `src/types/stock.ts` — shared types: `OHLCVRow`, `StockMeta`, `ChartData`, `ChartType`
-- `src/api/yahooFinance.ts` — fetch + parse + sessionStorage cache; `fetchChart(symbol, periodLabel, endDate?, signal?)`
+- `src/api/yahooFinance.ts` — fetch + parse + sessionStorage cache; `fetchChart(symbol, periodLabel, endDate?, signal?)`. corsproxy.io caches responses for 1 hour by default, so `buildYfUrl` accepts a `cacheBust` param (`Math.floor(Date.now() / CACHE_TTL_MS)`) embedded inside the Yahoo Finance URL to rotate the corsproxy cache key every 5 minutes
 - `src/App.tsx` — URL state management (`readParams` / `writeParams`), abort controller, single `load` callback
 
 ### URL params

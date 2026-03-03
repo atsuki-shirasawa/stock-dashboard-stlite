@@ -33,6 +33,7 @@ function buildYfUrl(
 	symbol: string,
 	periodLabel: PeriodLabel,
 	endDate?: Date,
+	cacheBust?: number,
 ): string {
 	const cfg = PERIODS[periodLabel];
 	if (!cfg) throw new Error(`Unknown period: ${periodLabel}`);
@@ -47,6 +48,9 @@ function buildYfUrl(
 		const period1 = Math.floor(startMs / 1000);
 		const period2 = Math.floor(endMs / 1000);
 		yfUrl = `${YF_BASE}/${symbol}?period1=${period1}&period2=${period2}&interval=${interval}`;
+	}
+	if (cacheBust !== undefined) {
+		yfUrl += `&_t=${cacheBust}`;
 	}
 	return CORS_PROXY + encodeURIComponent(yfUrl);
 }
@@ -76,7 +80,11 @@ interface CacheEntry {
 	expiresAt: number;
 }
 
-function cacheKey(symbol: string, periodLabel: PeriodLabel, endDate?: Date): string {
+function cacheKey(
+	symbol: string,
+	periodLabel: PeriodLabel,
+	endDate?: Date,
+): string {
 	return `yf:${symbol}:${periodLabel}:${endDate?.toISOString() ?? "today"}`;
 }
 
@@ -114,7 +122,13 @@ export async function fetchChart(
 	const cached = getCached(key);
 	if (cached) return cached;
 
-	const url = buildYfUrl(symbol, periodLabel, endDate);
+	// Pass cacheBust inside the Yahoo Finance URL (before encoding) so corsproxy's cache key changes every CACHE_TTL_MS
+	const url = buildYfUrl(
+		symbol,
+		periodLabel,
+		endDate,
+		Math.floor(Date.now() / CACHE_TTL_MS),
+	);
 	const resp = await fetch(url, { headers: YF_HEADERS, signal });
 	if (!resp.ok) {
 		throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);

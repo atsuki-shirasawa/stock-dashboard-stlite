@@ -26,16 +26,18 @@ export const FONT_FAMILY =
 	"'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 // Period config (1:1 with Python version)
-export const PERIODS: Record<PeriodLabel, { period: string; interval: string }> =
-	{
-		"1D": { period: "1d", interval: "5m" },
-		"1W": { period: "5d", interval: "30m" },
-		"1M": { period: "1mo", interval: "1d" },
-		"6M": { period: "6mo", interval: "1d" },
-		"1Y": { period: "1y", interval: "1d" },
-		"5Y": { period: "5y", interval: "1wk" },
-		"10Y": { period: "10y", interval: "1mo" },
-	};
+export const PERIODS: Record<
+	PeriodLabel,
+	{ period: string; interval: string }
+> = {
+	"1D": { period: "1d", interval: "5m" },
+	"1W": { period: "5d", interval: "30m" },
+	"1M": { period: "1mo", interval: "1d" },
+	"6M": { period: "6mo", interval: "1d" },
+	"1Y": { period: "1y", interval: "1d" },
+	"5Y": { period: "5y", interval: "1wk" },
+	"10Y": { period: "10y", interval: "1mo" },
+};
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
