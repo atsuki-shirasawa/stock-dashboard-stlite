@@ -229,8 +229,33 @@ export default function StockChart({
 				])
 			: undefined;
 
+	// 1W: 各日の最初のデータポイントのみtickを打つ
+	const w1DayTicks = useCategory
+		? (() => {
+				const seen = new Set<string>();
+				const vals: string[] = [];
+				const texts: string[] = [];
+				for (let i = 0; i < rows.length; i++) {
+					const d = new Date(rows[i]!.timestamp);
+					const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+					if (!seen.has(key)) {
+						seen.add(key);
+						vals.push(xs[i]!);
+						texts.push(
+							d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+						);
+					}
+				}
+				return { vals, texts };
+			})()
+		: null;
+
 	const xAxisExtra: Partial<LayoutAxis> = useCategory
-		? { type: "category", nticks: 6 }
+		? {
+				type: "category",
+				tickvals: w1DayTicks!.vals,
+				ticktext: w1DayTicks!.texts,
+			}
 		: {
 				rangebreaks: getRangebreaks(rows, periodLabel),
 				...(sessionRange ? { range: sessionRange } : {}),
