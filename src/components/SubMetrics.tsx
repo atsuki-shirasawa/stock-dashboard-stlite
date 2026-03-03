@@ -18,12 +18,29 @@ export default function SubMetrics({ rows, meta }: SubMetricsProps) {
 	const isJpy = meta.currency === "JPY";
 	const periodHigh = rows.reduce((acc, r) => Math.max(acc, r.high), -Infinity);
 	const periodLow = rows.reduce((acc, r) => Math.min(acc, r.low), Infinity);
-	const latestVolume = rows[rows.length - 1]!.volume;
+	// regularMarketVolume は当日累計出来高（最終バーより正確）、なければ最終バーで代替
+	const dailyVolume = meta.regularMarketVolume ?? rows[rows.length - 1]!.volume;
 
 	const items: MetricItem[] = [
 		{ label: "Period High", value: formatPrice(periodHigh, isJpy) },
 		{ label: "Period Low", value: formatPrice(periodLow, isJpy) },
-		{ label: "Latest Volume", value: latestVolume.toLocaleString() },
+		...(meta.regularMarketDayHigh != null
+			? [
+					{
+						label: "Day High",
+						value: formatPrice(meta.regularMarketDayHigh, isJpy),
+					},
+				]
+			: []),
+		...(meta.regularMarketDayLow != null
+			? [
+					{
+						label: "Day Low",
+						value: formatPrice(meta.regularMarketDayLow, isJpy),
+					},
+				]
+			: []),
+		{ label: "Daily Vol", value: dailyVolume.toLocaleString() },
 		{
 			label: "52W High",
 			value:
@@ -44,10 +61,11 @@ export default function SubMetrics({ rows, meta }: SubMetricsProps) {
 		<div
 			style={{
 				display: "flex",
-				flexWrap: "wrap",
-				gap: "8px 24px",
+				flexWrap: "nowrap",
+				gap: "clamp(6px, 2vw, 24px)",
 				padding: "6px 4px 4px",
 				borderTop: `1px solid ${DIVIDER_COLOR}`,
+				overflow: "hidden",
 			}}
 		>
 			{items.map(({ label, value }) => (
@@ -57,24 +75,29 @@ export default function SubMetrics({ rows, meta }: SubMetricsProps) {
 						display: "flex",
 						flexDirection: "column",
 						gap: 2,
-						minWidth: 80,
+						flex: "1 1 0",
+						minWidth: 0,
 					}}
 				>
 					<span
 						style={{
-							fontSize: 11,
+							fontSize: "clamp(7px, 1.4vw, 11px)",
 							color: SUBTEXT_COLOR,
 							whiteSpace: "nowrap",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
 						}}
 					>
 						{label}
 					</span>
 					<span
 						style={{
-							fontSize: 13,
+							fontSize: "clamp(8px, 1.6vw, 13px)",
 							color: TEXT_COLOR,
 							fontWeight: 500,
 							whiteSpace: "nowrap",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
 						}}
 					>
 						{value}

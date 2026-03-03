@@ -110,6 +110,65 @@ export default function App() {
 
 				{data && !loading && (
 					<>
+						<div style={{ flexShrink: 0, marginBottom: 6 }}>
+							<div
+								style={{
+									display: "flex",
+									alignItems: "baseline",
+									gap: 6,
+									flexWrap: "wrap",
+								}}
+							>
+								<span
+									style={{
+										fontSize: "clamp(14px, 1.2vw, 16px)",
+										color: SUBTEXT_COLOR,
+									}}
+								>
+									{data.meta.longName
+										? `${data.meta.longName} (${symbol})`
+										: (data.meta.shortName ?? symbol)}
+								</span>
+								{[data.meta.exchangeName, data.meta.timezone]
+									.filter(Boolean)
+									.join(" · ") && (
+									<span
+										style={{
+											fontSize: 11,
+											color: SUBTEXT_COLOR,
+											opacity: 0.6,
+										}}
+									>
+										{[data.meta.exchangeName, data.meta.timezone]
+											.filter(Boolean)
+											.join(" · ")}
+									</span>
+								)}
+								{data.meta.regularMarketTime != null && (
+									<span
+										style={{
+											fontSize: 11,
+											color: SUBTEXT_COLOR,
+											opacity: 0.6,
+										}}
+									>
+										· Updated{" "}
+										{new Date(data.meta.regularMarketTime).toLocaleTimeString(
+											"en-US",
+											{
+												...(data.meta.exchangeTimezoneName
+													? { timeZone: data.meta.exchangeTimezoneName }
+													: {}),
+												hour: "2-digit",
+												minute: "2-digit",
+												hour12: false,
+											},
+										)}
+										{data.meta.timezone ? ` ${data.meta.timezone}` : ""}
+									</span>
+								)}
+							</div>
+						</div>
 						<div
 							style={{
 								display: "flex",
@@ -119,7 +178,6 @@ export default function App() {
 							}}
 						>
 							<PriceHeader
-								symbol={symbol}
 								meta={data.meta}
 								latestClose={data.rows[data.rows.length - 1]!.close}
 								firstClose={data.rows[0]!.close}
@@ -139,6 +197,7 @@ export default function App() {
 								sessionStart={data.meta.regularMarketOpen}
 								sessionEnd={data.meta.regularMarketClose}
 								currency={data.meta.currency}
+								exchangeTimezoneName={data.meta.exchangeTimezoneName}
 							/>
 						</div>
 						<SubMetrics rows={data.rows} meta={data.meta} />

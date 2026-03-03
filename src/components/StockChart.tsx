@@ -36,9 +36,25 @@ interface StockChartProps {
 	sessionStart?: number; // Unix ms — used for 1D x-axis range
 	sessionEnd?: number; // Unix ms — used for 1D x-axis range
 	currency?: string;
+	exchangeTimezoneName?: string; // e.g. "Asia/Tokyo", "America/New_York"
 }
 
-const pad = (n: number, w = 2) => String(n).padStart(w, "0");
+/** Unix ms → "YYYY-MM-DD" in exchange timezone (falls back to local if tz undefined) */
+function tzDate(ts: number, tz?: string): string {
+	const opts: Intl.DateTimeFormatOptions = tz ? { timeZone: tz } : {};
+	return new Date(ts).toLocaleDateString("sv", opts);
+}
+
+/** Unix ms → "YYYY-MM-DD HH:MM:SS" in exchange timezone.
+ * Passed to Plotly without a TZ suffix — Plotly treats it as display-local time,
+ * which is what we want (the string itself represents exchange-local clock time). */
+function tzDateStr(ts: number, tz?: string): string {
+	const d = new Date(ts);
+	const opts: Intl.DateTimeFormatOptions = tz ? { timeZone: tz } : {};
+	const date = d.toLocaleDateString("sv", opts); // "YYYY-MM-DD"
+	const time = d.toLocaleTimeString("sv", { ...opts, hour12: false }); // "HH:MM:SS"
+	return `${date} ${time}`;
+}
 
 /**
  * Build rangebreaks based on interval type:
@@ -49,32 +65,31 @@ const pad = (n: number, w = 2) => String(n).padStart(w, "0");
 function getRangebreaks(
 	rows: OHLCVRow[],
 	periodLabel: PeriodLabel,
+	tz?: string,
 ): Partial<RangeBreak>[] {
 	if (rows.length === 0) return [];
 
 	// Weekly / monthly data — gaps are expected and visually acceptable; skip breaks
 	if (periodLabel === "5Y" || periodLabel === "10Y") return [];
 
-	// Daily data — enumerate missing calendar days (non-trading days)
-	const fmt = (d: Date) =>
-		`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-	const tradingDays = new Set(rows.map((r) => fmt(new Date(r.timestamp))));
+	// Daily data — enumerate missing calendar days (non-trading days) in exchange TZ
+	const tradingDays = new Set(rows.map((r) => tzDate(r.timestamp, tz)));
 
 	const firstRow = rows[0];
 	const lastRow = rows[rows.length - 1];
 	if (!firstRow || !lastRow) return [];
-	const first = new Date(firstRow.timestamp);
-	const last = new Date(lastRow.timestamp);
-	first.setHours(0, 0, 0, 0);
-	last.setHours(0, 0, 0, 0);
+
+	// Use UTC-based iteration so local DST shifts don't cause off-by-one errors
+	const firstStr = tzDate(firstRow.timestamp, tz);
+	const lastStr = tzDate(lastRow.timestamp, tz);
+	const cur = new Date(`${firstStr}T00:00:00Z`);
+	const end = new Date(`${lastStr}T00:00:00Z`);
 
 	const missing: string[] = [];
-	const cur = new Date(first);
-	while (cur <= last) {
-		const key = fmt(cur);
+	while (cur <= end) {
+		const key = cur.toISOString().slice(0, 10);
 		if (!tradingDays.has(key)) missing.push(key);
-		cur.setDate(cur.getDate() + 1);
+		cur.setUTCDate(cur.getUTCDate() + 1);
 	}
 
 	return missing.length === 0 ? [] : [{ values: missing }];
@@ -162,18 +177,6 @@ function buildVolumeTrace(rows: OHLCVRow[], xs: (string | number)[]): Data {
 	} as Data;
 }
 
-function fmtDate(ts: number): string {
-	const d = new Date(ts);
-	return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
-}
-
-/** Format a Unix-ms timestamp as "YYYY-MM-DD HH:MM:SS" in the browser's local timezone.
- * Plotly.js interprets strings without a timezone suffix as local time. */
-function toLocalDateStr(ts: number): string {
-	const d = new Date(ts);
-	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
 interface LayoutParams {
 	rows: OHLCVRow[];
 	periodLabel: PeriodLabel;
@@ -182,6 +185,7 @@ interface LayoutParams {
 	sessionStart?: number;
 	sessionEnd?: number;
 	xs: string[];
+	tz?: string;
 }
 
 function buildLayout({
@@ -192,6 +196,7 @@ function buildLayout({
 	sessionStart,
 	sessionEnd,
 	xs,
+	tz,
 }: LayoutParams): Partial<Layout> {
 	const useCategory = periodLabel === "1W";
 
@@ -208,13 +213,13 @@ function buildLayout({
 
 	const sessionRange =
 		periodLabel === "1D" && sessionStart && sessionEnd
-			? ([toLocalDateStr(sessionStart), toLocalDateStr(sessionEnd)] as [
+			? ([tzDateStr(sessionStart, tz), tzDateStr(sessionEnd, tz)] as [
 					string,
 					string,
 				])
 			: undefined;
 
-	const weeklyTicks = useCategory ? buildWeeklyTicks(rows, xs) : null;
+	const weeklyTicks = useCategory ? buildWeeklyTicks(rows, xs, tz) : null;
 
 	const xAxisExtra: Partial<LayoutAxis> = useCategory
 		? {
@@ -223,7 +228,7 @@ function buildLayout({
 				ticktext: weeklyTicks!.texts,
 			}
 		: {
-				rangebreaks: getRangebreaks(rows, periodLabel),
+				rangebreaks: getRangebreaks(rows, periodLabel, tz),
 				...(sessionRange ? { range: sessionRange } : {}),
 			};
 
@@ -237,15 +242,7 @@ function buildLayout({
 		title: { text: "" },
 	};
 
-	const dateRangeTitle = `${fmtDate(rows[0]!.timestamp)} 〜 ${fmtDate(rows[rows.length - 1]!.timestamp)}`;
-
 	return {
-		title: {
-			text: dateRangeTitle,
-			font: { color: SUBTEXT_COLOR, size: 14, family: FONT_FAMILY },
-			x: 0.01,
-			xanchor: "left",
-		},
 		xaxis: { ...xAxisCommon, ...xAxisExtra, rangeslider: { visible: false } },
 		yaxis: {
 			...yAxisCommon,
@@ -279,18 +276,22 @@ function buildLayout({
 function buildWeeklyTicks(
 	rows: OHLCVRow[],
 	xs: string[],
+	tz?: string,
 ): { vals: string[]; texts: string[] } {
 	const seen = new Set<string>();
 	const vals: string[] = [];
 	const texts: string[] = [];
 	for (let i = 0; i < rows.length; i++) {
-		const d = new Date(rows[i]!.timestamp);
-		const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+		const key = tzDate(rows[i]!.timestamp, tz);
 		if (!seen.has(key)) {
 			seen.add(key);
 			vals.push(xs[i]!);
 			texts.push(
-				d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+				new Date(rows[i]!.timestamp).toLocaleDateString("en-US", {
+					...(tz ? { timeZone: tz } : {}),
+					month: "short",
+					day: "numeric",
+				}),
 			);
 		}
 	}
@@ -308,15 +309,17 @@ export default function StockChart({
 	sessionStart,
 	sessionEnd,
 	currency,
+	exchangeTimezoneName,
 }: StockChartProps) {
 	if (rows.length === 0) return null;
 
 	const isJpy = currency === "JPY";
 	const priceTickFormat = isJpy ? ",.0f" : ",.2f";
 	const priceHoverFormat = isJpy ? "%{y:,.0f}" : "%{y:,.2f}";
+	const tz = exchangeTimezoneName;
 
-	// Always format in local timezone (no "Z" suffix = Plotly treats as local time)
-	const xs = rows.map((r) => toLocalDateStr(r.timestamp));
+	// Format in exchange timezone; no "Z" suffix → Plotly treats as display-local time
+	const xs = rows.map((r) => tzDateStr(r.timestamp, tz));
 
 	const baseline = getColorBaseline(rows, previousClose);
 	const priceTraces: Data[] =
@@ -343,6 +346,7 @@ export default function StockChart({
 		sessionStart,
 		sessionEnd,
 		xs,
+		tz,
 	});
 
 	return (

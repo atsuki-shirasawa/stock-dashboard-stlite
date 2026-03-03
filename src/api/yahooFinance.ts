@@ -1,5 +1,5 @@
 import { CACHE_TTL_MS, PERIOD_DELTA_MS, PERIODS } from "../constants";
-import type { ChartData, PeriodLabel, StockMeta } from "../types/stock";
+import type { ChartData, PeriodLabel, StockMeta, YfMeta } from "../types/stock";
 
 const CORS_PROXY = "https://corsproxy.io/?url=";
 const YF_BASE = "https://query1.finance.yahoo.com/v8/finance/chart";
@@ -22,11 +22,11 @@ interface YfQuote {
 interface YfResult {
 	timestamp?: number[];
 	indicators?: { quote?: YfQuote[] };
-	meta?: Record<string, unknown>;
+	meta?: YfMeta;
 }
 
 interface YfResponse {
-	chart?: { result?: YfResult[] };
+	chart?: { result?: YfResult[]; error?: unknown };
 }
 
 function buildYfUrl(
@@ -55,23 +55,39 @@ function buildYfUrl(
 	return CORS_PROXY + encodeURIComponent(yfUrl);
 }
 
-function parseMeta(meta: Record<string, unknown>): StockMeta {
-	const regular = (
-		meta.currentTradingPeriod as
-			| { regular?: { start?: number; end?: number } }
-			| undefined
-	)?.regular;
+function parseMeta(meta: YfMeta): StockMeta {
+	const regular = meta.currentTradingPeriod?.regular;
 	return {
-		shortName:
-			(meta.shortName as string | undefined) ||
-			(meta.longName as string | undefined),
-		previousClose: meta.previousClose as number | undefined,
-		regularMarketPrice: meta.regularMarketPrice as number | undefined,
-		currency: meta.currency as string | undefined,
-		fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh as number | undefined,
-		fiftyTwoWeekLow: meta.fiftyTwoWeekLow as number | undefined,
-		regularMarketOpen: regular?.start ? regular.start * 1000 : undefined,
-		regularMarketClose: regular?.end ? regular.end * 1000 : undefined,
+		symbol: meta.symbol,
+		shortName: meta.shortName || meta.longName,
+		longName: meta.longName,
+		currency: meta.currency,
+		exchangeName: meta.exchangeName,
+		fullExchangeName: meta.fullExchangeName,
+		instrumentType: meta.instrumentType,
+		timezone: meta.timezone,
+		exchangeTimezoneName: meta.exchangeTimezoneName,
+		gmtoffset: meta.gmtoffset,
+		regularMarketPrice: meta.regularMarketPrice,
+		previousClose: meta.previousClose,
+		chartPreviousClose: meta.chartPreviousClose,
+		regularMarketDayHigh: meta.regularMarketDayHigh,
+		regularMarketDayLow: meta.regularMarketDayLow,
+		regularMarketVolume: meta.regularMarketVolume,
+		fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
+		fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
+		firstTradeDate:
+			meta.firstTradeDate != null ? meta.firstTradeDate * 1000 : undefined,
+		regularMarketTime:
+			meta.regularMarketTime != null
+				? meta.regularMarketTime * 1000
+				: undefined,
+		regularMarketOpen:
+			regular?.start != null ? regular.start * 1000 : undefined,
+		regularMarketClose: regular?.end != null ? regular.end * 1000 : undefined,
+		priceHint: meta.priceHint,
+		dataGranularity: meta.dataGranularity,
+		range: meta.range,
 	};
 }
 
