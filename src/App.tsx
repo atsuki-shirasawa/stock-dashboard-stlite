@@ -4,21 +4,31 @@ import PeriodSelector from "./components/PeriodSelector";
 import PriceHeader from "./components/PriceHeader";
 import StockChart from "./components/StockChart";
 import SubMetrics from "./components/SubMetrics";
-import {
-	BG,
-	DOWN_COLOR,
-	ERROR_BG,
-	ERROR_BORDER,
-	SUBTEXT_COLOR,
-	TEXT_COLOR,
-} from "./constants";
-import type { ChartData, PeriodLabel } from "./types/stock";
+import type { ThemeMode } from "./constants";
+import { ThemeProvider, useTheme } from "./context/theme";
+import type { ChartData, ChartType, PeriodLabel } from "./types/stock";
 import { getColorBaseline } from "./utils/baseline";
 import { readParams, writeParams } from "./utils/urlParams";
 
-export default function App() {
-	const [{ symbol, chartType, endDate, showVolume, period: initPeriod }] =
-		useState(readParams);
+interface AppInnerProps {
+	symbol: string;
+	chartType: ChartType;
+	endDate: Date | undefined;
+	showVolume: boolean;
+	initPeriod: PeriodLabel;
+	themeMode: ThemeMode;
+}
+
+function AppInner({
+	symbol,
+	chartType,
+	endDate,
+	showVolume,
+	initPeriod,
+	themeMode,
+}: AppInnerProps) {
+	const { BG, DOWN_COLOR, ERROR_BG, ERROR_BORDER, SUBTEXT_COLOR, TEXT_COLOR } =
+		useTheme();
 	const [period, setPeriod] = useState<PeriodLabel>(initPeriod);
 
 	const [data, setData] = useState<ChartData | null>(null);
@@ -54,8 +64,8 @@ export default function App() {
 	}, [symbol, period, endDate, load]);
 
 	useEffect(() => {
-		writeParams(symbol, period, chartType, endDate, showVolume);
-	}, [symbol, period, chartType, endDate, showVolume]);
+		writeParams(symbol, period, chartType, endDate, showVolume, themeMode);
+	}, [symbol, period, chartType, endDate, showVolume, themeMode]);
 
 	const isUp = data
 		? (data.meta.regularMarketPrice ??
@@ -205,5 +215,23 @@ export default function App() {
 				)}
 			</div>
 		</div>
+	);
+}
+
+export default function App() {
+	const [{ symbol, chartType, endDate, showVolume, period, themeMode }] =
+		useState(readParams);
+
+	return (
+		<ThemeProvider mode={themeMode}>
+			<AppInner
+				symbol={symbol}
+				chartType={chartType}
+				endDate={endDate}
+				showVolume={showVolume}
+				initPeriod={period}
+				themeMode={themeMode}
+			/>
+		</ThemeProvider>
 	);
 }

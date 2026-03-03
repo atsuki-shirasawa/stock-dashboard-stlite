@@ -1,4 +1,4 @@
-import { DIVIDER_COLOR, SUBTEXT_COLOR, TEXT_COLOR } from "../constants";
+import { useTheme } from "../context/theme";
 import type { OHLCVRow, StockMeta } from "../types/stock";
 import { formatPrice } from "../utils/formatPrice";
 
@@ -13,6 +13,7 @@ interface MetricItem {
 }
 
 export default function SubMetrics({ rows, meta }: SubMetricsProps) {
+	const { DIVIDER_COLOR, SUBTEXT_COLOR, TEXT_COLOR } = useTheme();
 	if (rows.length === 0) return null;
 
 	const isJpy = meta.currency === "JPY";

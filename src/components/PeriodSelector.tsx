@@ -1,13 +1,5 @@
-import {
-	DOWN_COLOR,
-	DOWN_FILL,
-	HOVER_BORDER,
-	PERIODS,
-	SUBTEXT_COLOR,
-	TEXT_COLOR,
-	UP_COLOR,
-	UP_FILL,
-} from "../constants";
+import { PERIODS } from "../constants";
+import { useTheme } from "../context/theme";
 import type { PeriodLabel } from "../types/stock";
 
 const PERIOD_LABELS = Object.keys(PERIODS) as PeriodLabel[];
@@ -23,6 +15,15 @@ export default function PeriodSelector({
 	onChange,
 	isUp = true,
 }: PeriodSelectorProps) {
+	const {
+		DOWN_COLOR,
+		DOWN_FILL,
+		HOVER_BORDER,
+		SUBTEXT_COLOR,
+		TEXT_COLOR,
+		UP_COLOR,
+		UP_FILL,
+	} = useTheme();
 	const accentColor = isUp ? UP_COLOR : DOWN_COLOR;
 	const accentFill = isUp ? UP_FILL : DOWN_FILL;
 

@@ -1,25 +1,9 @@
 import type { Data, Layout, LayoutAxis, RangeBreak } from "plotly.js";
 import PlotlyInstance from "plotly.js-finance-dist";
-
 import createPlotlyComponent from "react-plotly.js/factory";
-import {
-	BG,
-	DOWN_COLOR,
-	DOWN_FILL_GRAD_BOT,
-	DOWN_FILL_GRAD_TOP,
-	FONT_FAMILY,
-	GRID_COLOR,
-	HOVER_BORDER,
-	PANEL_BG,
-	SPIKE_COLOR,
-	SUBTEXT_COLOR,
-	TEXT_COLOR,
-	UP_COLOR,
-	UP_FILL_GRAD_BOT,
-	UP_FILL_GRAD_TOP,
-	VOL_DOWN,
-	VOL_UP,
-} from "../constants";
+import type { Theme } from "../constants";
+import { FONT_FAMILY } from "../constants";
+import { useTheme } from "../context/theme";
 import type { ChartType, OHLCVRow, PeriodLabel } from "../types/stock";
 import { getColorBaseline } from "../utils/baseline";
 
@@ -99,6 +83,7 @@ function buildCandlestickTrace(
 	rows: OHLCVRow[],
 	xs: (string | number)[],
 	symbol: string,
+	theme: Theme,
 ): Data {
 	return {
 		type: "candlestick",
@@ -107,13 +92,16 @@ function buildCandlestickTrace(
 		high: rows.map((r) => r.high),
 		low: rows.map((r) => r.low),
 		close: rows.map((r) => r.close),
-		increasing: { line: { color: UP_COLOR, width: 1 }, fillcolor: UP_COLOR },
+		increasing: {
+			line: { color: theme.UP_COLOR, width: 1 },
+			fillcolor: theme.UP_COLOR,
+		},
 		decreasing: {
-			line: { color: DOWN_COLOR, width: 1 },
-			fillcolor: DOWN_COLOR,
+			line: { color: theme.DOWN_COLOR, width: 1 },
+			fillcolor: theme.DOWN_COLOR,
 		},
 		name: symbol,
-		hoverlabel: { bgcolor: PANEL_BG, bordercolor: HOVER_BORDER },
+		hoverlabel: { bgcolor: theme.PANEL_BG, bordercolor: theme.HOVER_BORDER },
 	} as Data;
 }
 
@@ -122,14 +110,15 @@ function buildAreaTraces(
 	xs: (string | number)[],
 	symbol: string,
 	baseline: number,
+	theme: Theme,
 	priceHoverFormat = "%{y:,.2f}",
 	marketPrice?: number,
 ): Data[] {
 	const last = marketPrice ?? rows[rows.length - 1]?.close ?? 0;
 	const isUp = last >= baseline;
-	const lineColor = isUp ? UP_COLOR : DOWN_COLOR;
-	const gradTop = isUp ? UP_FILL_GRAD_TOP : DOWN_FILL_GRAD_TOP;
-	const gradBot = isUp ? UP_FILL_GRAD_BOT : DOWN_FILL_GRAD_BOT;
+	const lineColor = isUp ? theme.UP_COLOR : theme.DOWN_COLOR;
+	const gradTop = isUp ? theme.UP_FILL_GRAD_TOP : theme.DOWN_FILL_GRAD_TOP;
+	const gradBot = isUp ? theme.UP_FILL_GRAD_BOT : theme.DOWN_FILL_GRAD_BOT;
 	const base = Math.min(...rows.map((r) => r.close)) * 0.998;
 
 	const baseTrace: Data = {
@@ -148,7 +137,7 @@ function buildAreaTraces(
 		y: rows.map((r) => r.close),
 		mode: "lines",
 		name: symbol,
-		line: { color: lineColor, width: 1.5 },
+		line: { color: lineColor, width: 1 },
 		fill: "tonexty",
 		fillgradient: {
 			type: "vertical",
@@ -163,8 +152,14 @@ function buildAreaTraces(
 	return [baseTrace, areaTrace];
 }
 
-function buildVolumeTrace(rows: OHLCVRow[], xs: (string | number)[]): Data {
-	const colors = rows.map((r) => (r.close >= r.open ? VOL_UP : VOL_DOWN));
+function buildVolumeTrace(
+	rows: OHLCVRow[],
+	xs: (string | number)[],
+	theme: Theme,
+): Data {
+	const colors = rows.map((r) =>
+		r.close >= r.open ? theme.VOL_UP : theme.VOL_DOWN,
+	);
 	return {
 		type: "bar",
 		x: xs,
@@ -186,6 +181,7 @@ interface LayoutParams {
 	sessionEnd?: number;
 	xs: string[];
 	tz?: string;
+	theme: Theme;
 }
 
 function buildLayout({
@@ -197,6 +193,7 @@ function buildLayout({
 	sessionEnd,
 	xs,
 	tz,
+	theme,
 }: LayoutParams): Partial<Layout> {
 	const useCategory = periodLabel === "1W";
 
@@ -204,11 +201,11 @@ function buildLayout({
 		showgrid: false,
 		zeroline: false,
 		showspikes: true,
-		spikecolor: SPIKE_COLOR,
+		spikecolor: theme.SPIKE_COLOR,
 		spikethickness: 1,
 		spikedash: "dot",
 		spikesnap: "cursor",
-		tickfont: { color: SUBTEXT_COLOR, size: 11 },
+		tickfont: { color: theme.SUBTEXT_COLOR, size: 11 },
 	};
 
 	const sessionRange =
@@ -233,10 +230,10 @@ function buildLayout({
 			};
 
 	const yAxisCommon: Partial<LayoutAxis> = {
-		gridcolor: GRID_COLOR,
+		gridcolor: theme.GRID_COLOR,
 		zeroline: false,
 		showspikes: false,
-		tickfont: { color: SUBTEXT_COLOR, size: 11 },
+		tickfont: { color: theme.SUBTEXT_COLOR, size: 11 },
 		tickformat: priceTickFormat,
 		side: "right",
 		title: { text: "" },
@@ -259,14 +256,14 @@ function buildLayout({
 			: {}),
 		autosize: true,
 		margin: { t: 32, b: 32, l: 12, r: 60 },
-		plot_bgcolor: BG,
-		paper_bgcolor: BG,
-		font: { color: TEXT_COLOR, family: FONT_FAMILY, size: 12 },
+		plot_bgcolor: theme.BG,
+		paper_bgcolor: theme.BG,
+		font: { color: theme.TEXT_COLOR, family: FONT_FAMILY, size: 12 },
 		hovermode: "x unified",
 		hoverlabel: {
-			bgcolor: PANEL_BG,
-			bordercolor: HOVER_BORDER,
-			font: { color: TEXT_COLOR, size: 12, family: FONT_FAMILY },
+			bgcolor: theme.PANEL_BG,
+			bordercolor: theme.HOVER_BORDER,
+			font: { color: theme.TEXT_COLOR, size: 12, family: FONT_FAMILY },
 		},
 		showlegend: false,
 	};
@@ -311,6 +308,7 @@ export default function StockChart({
 	currency,
 	exchangeTimezoneName,
 }: StockChartProps) {
+	const theme = useTheme();
 	if (rows.length === 0) return null;
 
 	const isJpy = currency === "JPY";
@@ -329,13 +327,14 @@ export default function StockChart({
 					xs,
 					symbol,
 					baseline,
+					theme,
 					priceHoverFormat,
 					regularMarketPrice,
 				)
-			: [buildCandlestickTrace(rows, xs, symbol)];
+			: [buildCandlestickTrace(rows, xs, symbol, theme)];
 
 	const traces: Data[] = showVolume
-		? [...priceTraces, buildVolumeTrace(rows, xs)]
+		? [...priceTraces, buildVolumeTrace(rows, xs, theme)]
 		: priceTraces;
 
 	const layout = buildLayout({
@@ -347,6 +346,7 @@ export default function StockChart({
 		sessionEnd,
 		xs,
 		tz,
+		theme,
 	});
 
 	return (

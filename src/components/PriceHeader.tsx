@@ -1,13 +1,6 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
-import {
-	DELTA_LABELS,
-	DOWN_COLOR,
-	DOWN_FILL,
-	SUBTEXT_COLOR,
-	TEXT_COLOR,
-	UP_COLOR,
-	UP_FILL,
-} from "../constants";
+import { DELTA_LABELS } from "../constants";
+import { useTheme } from "../context/theme";
 import type { PeriodLabel, StockMeta } from "../types/stock";
 import { formatPrice } from "../utils/formatPrice";
 
@@ -24,6 +17,14 @@ export default function PriceHeader({
 	firstClose,
 	periodLabel,
 }: PriceHeaderProps) {
+	const {
+		DOWN_COLOR,
+		DOWN_FILL,
+		SUBTEXT_COLOR,
+		TEXT_COLOR,
+		UP_COLOR,
+		UP_FILL,
+	} = useTheme();
 	const deltaLabel = DELTA_LABELS[periodLabel];
 
 	const prevPeriod =

@@ -1,27 +1,76 @@
 import type { PeriodLabel } from "./types/stock";
 
-// Color theme — light mode
-export const BG = "#f8fafc";
-export const PANEL_BG = "#ffffff";
-export const UP_COLOR = "#10b981";
-export const DOWN_COLOR = "#ef4444";
-export const UP_FILL = "rgba(16,185,129,0.12)";
-export const DOWN_FILL = "rgba(239,68,68,0.10)";
-// Gradient fill: top (near line) → opaque, bottom (baseline) → transparent
-export const UP_FILL_GRAD_TOP = "rgba(16,185,129,0.5)";
-export const UP_FILL_GRAD_BOT = "rgba(16,185,129,0.0)";
-export const DOWN_FILL_GRAD_TOP = "rgba(239,68,68,0.5)";
-export const DOWN_FILL_GRAD_BOT = "rgba(239,68,68,0.0)";
-export const VOL_UP = "rgba(16,185,129,0.40)";
-export const VOL_DOWN = "rgba(239,68,68,0.40)";
-export const GRID_COLOR = "rgba(148,163,184,0.20)";
-export const SPIKE_COLOR = "rgba(100,116,139,0.40)";
-export const HOVER_BORDER = "rgba(100,116,139,0.20)";
-export const DIVIDER_COLOR = "rgba(100,116,139,0.15)";
-export const ERROR_BG = "rgba(239,68,68,0.08)";
-export const ERROR_BORDER = "rgba(239,68,68,0.25)";
-export const TEXT_COLOR = "#0f172a";
-export const SUBTEXT_COLOR = "#64748b";
+export type ThemeMode = "auto" | "light" | "dark";
+
+export interface Theme {
+	BG: string;
+	PANEL_BG: string;
+	UP_COLOR: string;
+	DOWN_COLOR: string;
+	UP_FILL: string;
+	DOWN_FILL: string;
+	UP_FILL_GRAD_TOP: string;
+	UP_FILL_GRAD_BOT: string;
+	DOWN_FILL_GRAD_TOP: string;
+	DOWN_FILL_GRAD_BOT: string;
+	VOL_UP: string;
+	VOL_DOWN: string;
+	GRID_COLOR: string;
+	SPIKE_COLOR: string;
+	HOVER_BORDER: string;
+	DIVIDER_COLOR: string;
+	ERROR_BG: string;
+	ERROR_BORDER: string;
+	TEXT_COLOR: string;
+	SUBTEXT_COLOR: string;
+}
+
+export const LIGHT_THEME: Theme = {
+	BG: "#f8fafc",
+	PANEL_BG: "#ffffff",
+	UP_COLOR: "#10b981",
+	DOWN_COLOR: "#ef4444",
+	UP_FILL: "rgba(16,185,129,0.12)",
+	DOWN_FILL: "rgba(239,68,68,0.10)",
+	UP_FILL_GRAD_TOP: "rgba(16,185,129,0.5)",
+	UP_FILL_GRAD_BOT: "rgba(16,185,129,0.0)",
+	DOWN_FILL_GRAD_TOP: "rgba(239,68,68,0.5)",
+	DOWN_FILL_GRAD_BOT: "rgba(239,68,68,0.0)",
+	VOL_UP: "rgba(16,185,129,0.40)",
+	VOL_DOWN: "rgba(239,68,68,0.40)",
+	GRID_COLOR: "rgba(148,163,184,0.20)",
+	SPIKE_COLOR: "rgba(100,116,139,0.40)",
+	HOVER_BORDER: "rgba(100,116,139,0.20)",
+	DIVIDER_COLOR: "rgba(100,116,139,0.15)",
+	ERROR_BG: "rgba(239,68,68,0.08)",
+	ERROR_BORDER: "rgba(239,68,68,0.25)",
+	TEXT_COLOR: "#0f172a",
+	SUBTEXT_COLOR: "#64748b",
+};
+
+export const DARK_THEME: Theme = {
+	BG: "#0f172a",
+	PANEL_BG: "#1e293b",
+	UP_COLOR: "#10b981",
+	DOWN_COLOR: "#ef4444",
+	UP_FILL: "rgba(16,185,129,0.15)",
+	DOWN_FILL: "rgba(239,68,68,0.12)",
+	UP_FILL_GRAD_TOP: "rgba(16,185,129,0.5)",
+	UP_FILL_GRAD_BOT: "rgba(16,185,129,0.0)",
+	DOWN_FILL_GRAD_TOP: "rgba(239,68,68,0.5)",
+	DOWN_FILL_GRAD_BOT: "rgba(239,68,68,0.0)",
+	VOL_UP: "rgba(16,185,129,0.40)",
+	VOL_DOWN: "rgba(239,68,68,0.40)",
+	GRID_COLOR: "rgba(148,163,184,0.12)",
+	SPIKE_COLOR: "rgba(148,163,184,0.40)",
+	HOVER_BORDER: "rgba(148,163,184,0.20)",
+	DIVIDER_COLOR: "rgba(148,163,184,0.15)",
+	ERROR_BG: "rgba(239,68,68,0.12)",
+	ERROR_BORDER: "rgba(239,68,68,0.30)",
+	TEXT_COLOR: "#f1f5f9",
+	SUBTEXT_COLOR: "#94a3b8",
+};
+
 export const FONT_FAMILY =
 	"'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 

@@ -1,3 +1,4 @@
+import type { ThemeMode } from "../constants";
 import {
 	CHART_FROM_KEY,
 	CHART_TO_KEY,
@@ -15,6 +16,7 @@ export interface AppParams {
 	chartType: ChartType;
 	endDate: Date | undefined;
 	showVolume: boolean;
+	themeMode: ThemeMode;
 }
 
 export function readParams(): AppParams {
@@ -39,7 +41,11 @@ export function readParams(): AppParams {
 
 	const showVolume = p.get("vol") === "1";
 
-	return { symbol, period, chartType, endDate, showVolume };
+	const themeRaw = p.get("theme");
+	const themeMode: ThemeMode =
+		themeRaw === "dark" || themeRaw === "light" ? themeRaw : "auto";
+
+	return { symbol, period, chartType, endDate, showVolume, themeMode };
 }
 
 export function writeParams(
@@ -48,6 +54,7 @@ export function writeParams(
 	chartType: ChartType,
 	endDate: Date | undefined,
 	showVolume: boolean,
+	themeMode: ThemeMode,
 ): void {
 	const p = new URLSearchParams();
 	p.set("symbol", symbol);
@@ -55,6 +62,7 @@ export function writeParams(
 	p.set("chart", CHART_TO_KEY[chartType] ?? chartType);
 	if (endDate) p.set("date", endDate.toISOString().slice(0, 10));
 	if (showVolume) p.set("vol", "1");
+	if (themeMode !== "auto") p.set("theme", themeMode);
 	const newSearch = `?${p.toString()}`;
 	if (window.location.search !== newSearch) {
 		window.history.replaceState(null, "", newSearch);
