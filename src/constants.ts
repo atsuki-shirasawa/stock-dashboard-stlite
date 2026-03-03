@@ -1,3 +1,5 @@
+import type { PeriodLabel } from "./types/stock";
+
 // Color theme — light mode
 export const BG = "#f8fafc";
 export const PANEL_BG = "#ffffff";
@@ -15,6 +17,7 @@ export const VOL_DOWN = "rgba(239,68,68,0.40)";
 export const GRID_COLOR = "rgba(148,163,184,0.20)";
 export const SPIKE_COLOR = "rgba(100,116,139,0.40)";
 export const HOVER_BORDER = "rgba(100,116,139,0.20)";
+export const DIVIDER_COLOR = "rgba(100,116,139,0.15)";
 export const ERROR_BG = "rgba(239,68,68,0.08)";
 export const ERROR_BORDER = "rgba(239,68,68,0.25)";
 export const TEXT_COLOR = "#0f172a";
@@ -23,27 +26,30 @@ export const FONT_FAMILY =
 	"'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 // Period config (1:1 with Python version)
-export const PERIODS: Record<string, { period: string; interval: string }> = {
-	"1D": { period: "1d", interval: "5m" },
-	"1W": { period: "5d", interval: "30m" },
-	"1M": { period: "1mo", interval: "1d" },
-	"6M": { period: "6mo", interval: "1d" },
-	"1Y": { period: "1y", interval: "1d" },
-	"5Y": { period: "5y", interval: "1wk" },
-	"10Y": { period: "10y", interval: "1mo" },
+export const PERIODS: Record<PeriodLabel, { period: string; interval: string }> =
+	{
+		"1D": { period: "1d", interval: "5m" },
+		"1W": { period: "5d", interval: "30m" },
+		"1M": { period: "1mo", interval: "1d" },
+		"6M": { period: "6mo", interval: "1d" },
+		"1Y": { period: "1y", interval: "1d" },
+		"5Y": { period: "5y", interval: "1wk" },
+		"10Y": { period: "10y", interval: "1mo" },
+	};
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export const PERIOD_DELTA_MS: Record<PeriodLabel, number> = {
+	"1D": 1 * MS_PER_DAY,
+	"1W": 7 * MS_PER_DAY,
+	"1M": 30 * MS_PER_DAY,
+	"6M": 182 * MS_PER_DAY,
+	"1Y": 365 * MS_PER_DAY,
+	"5Y": 365 * 5 * MS_PER_DAY,
+	"10Y": 365 * 10 * MS_PER_DAY,
 };
 
-export const PERIOD_DELTA_MS: Record<string, number> = {
-	"1D": 1 * 24 * 60 * 60 * 1000,
-	"1W": 7 * 24 * 60 * 60 * 1000,
-	"1M": 30 * 24 * 60 * 60 * 1000,
-	"6M": 182 * 24 * 60 * 60 * 1000,
-	"1Y": 365 * 24 * 60 * 60 * 1000,
-	"5Y": 365 * 5 * 24 * 60 * 60 * 1000,
-	"10Y": 365 * 10 * 24 * 60 * 60 * 1000,
-};
-
-export const DELTA_LABELS: Record<string, string> = {
+export const DELTA_LABELS: Record<PeriodLabel, string> = {
 	"1D": "vs prev day",
 	"1W": "vs 1W ago",
 	"1M": "vs 1M ago",
@@ -54,7 +60,7 @@ export const DELTA_LABELS: Record<string, string> = {
 };
 
 // URL param mappings (1:1 with Python version)
-export const PERIOD_TO_KEY: Record<string, string> = {
+export const PERIOD_TO_KEY: Record<PeriodLabel, string> = {
 	"1D": "1d",
 	"1W": "1w",
 	"1M": "1mo",
@@ -63,9 +69,9 @@ export const PERIOD_TO_KEY: Record<string, string> = {
 	"5Y": "5y",
 	"10Y": "10y",
 };
-export const PERIOD_FROM_KEY: Record<string, string> = Object.fromEntries(
+export const PERIOD_FROM_KEY: Record<string, PeriodLabel> = Object.fromEntries(
 	Object.entries(PERIOD_TO_KEY).map(([k, v]) => [v, k]),
-);
+) as Record<string, PeriodLabel>;
 
 export const CHART_TO_KEY: Record<string, string> = {
 	Candlestick: "candlestick",
@@ -76,7 +82,7 @@ export const CHART_FROM_KEY: Record<string, string> = Object.fromEntries(
 );
 
 export const DEFAULT_SYMBOL = "AAPL";
-export const DEFAULT_PERIOD = "1Y";
+export const DEFAULT_PERIOD: PeriodLabel = "1Y";
 export const DEFAULT_CHART = "Area";
 
 // Cache TTL in milliseconds (5 minutes, same as @st.cache_data(ttl=300))

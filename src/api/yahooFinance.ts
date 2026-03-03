@@ -1,5 +1,5 @@
 import { CACHE_TTL_MS, PERIOD_DELTA_MS, PERIODS } from "../constants";
-import type { ChartData, StockMeta } from "../types/stock";
+import type { ChartData, PeriodLabel, StockMeta } from "../types/stock";
 
 const CORS_PROXY = "https://corsproxy.io/?url=";
 const YF_BASE = "https://query1.finance.yahoo.com/v8/finance/chart";
@@ -31,7 +31,7 @@ interface YfResponse {
 
 function buildYfUrl(
 	symbol: string,
-	periodLabel: string,
+	periodLabel: PeriodLabel,
 	endDate?: Date,
 ): string {
 	const cfg = PERIODS[periodLabel];
@@ -62,6 +62,7 @@ function parseMeta(meta: Record<string, unknown>): StockMeta {
 			(meta.shortName as string | undefined) ||
 			(meta.longName as string | undefined),
 		previousClose: meta.previousClose as number | undefined,
+		regularMarketPrice: meta.regularMarketPrice as number | undefined,
 		currency: meta.currency as string | undefined,
 		fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh as number | undefined,
 		fiftyTwoWeekLow: meta.fiftyTwoWeekLow as number | undefined,
@@ -75,7 +76,7 @@ interface CacheEntry {
 	expiresAt: number;
 }
 
-function cacheKey(symbol: string, periodLabel: string, endDate?: Date): string {
+function cacheKey(symbol: string, periodLabel: PeriodLabel, endDate?: Date): string {
 	return `yf:${symbol}:${periodLabel}:${endDate?.toISOString() ?? "today"}`;
 }
 
@@ -105,7 +106,7 @@ function setCached(key: string, data: ChartData): void {
 
 export async function fetchChart(
 	symbol: string,
-	periodLabel: string,
+	periodLabel: PeriodLabel,
 	endDate?: Date,
 	signal?: AbortSignal,
 ): Promise<ChartData> {
@@ -148,6 +149,5 @@ export async function fetchChart(
 	const meta = parseMeta(result.meta ?? {});
 	const data: ChartData = { rows, meta };
 	setCached(key, data);
-	console.log(data);
 	return data;
 }

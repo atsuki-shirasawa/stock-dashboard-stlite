@@ -20,21 +20,25 @@ import {
 	VOL_DOWN,
 	VOL_UP,
 } from "../constants";
-import type { ChartType, OHLCVRow } from "../types/stock";
+import type { ChartType, OHLCVRow, PeriodLabel } from "../types/stock";
+import { getColorBaseline } from "../utils/baseline";
 
 const Plot = createPlotlyComponent(PlotlyInstance);
 
 interface StockChartProps {
 	rows: OHLCVRow[];
 	symbol: string;
-	periodLabel: string;
+	periodLabel: PeriodLabel;
 	chartType: ChartType;
 	showVolume: boolean;
 	previousClose?: number;
+	regularMarketPrice?: number; // 現在の市場価格（色判定用）
 	sessionStart?: number; // Unix ms — used for 1D x-axis range
 	sessionEnd?: number; // Unix ms — used for 1D x-axis range
 	currency?: string;
 }
+
+const pad = (n: number, w = 2) => String(n).padStart(w, "0");
 
 /**
  * Build rangebreaks based on interval type:
@@ -44,7 +48,7 @@ interface StockChartProps {
  */
 function getRangebreaks(
 	rows: OHLCVRow[],
-	periodLabel: string,
+	periodLabel: PeriodLabel,
 ): Partial<RangeBreak>[] {
 	if (rows.length === 0) return [];
 
@@ -53,7 +57,7 @@ function getRangebreaks(
 
 	// Daily data — enumerate missing calendar days (non-trading days)
 	const fmt = (d: Date) =>
-		`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+		`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 	const tradingDays = new Set(rows.map((r) => fmt(new Date(r.timestamp))));
 
@@ -102,14 +106,11 @@ function buildAreaTraces(
 	rows: OHLCVRow[],
 	xs: (string | number)[],
 	symbol: string,
-	previousClose?: number,
+	baseline: number,
 	priceHoverFormat = "%{y:,.2f}",
+	marketPrice?: number,
 ): Data[] {
-	// previousClose: from meta (intraday 1D/1W only)
-	// rows[length-2].close: previous bar's close for daily/weekly/monthly intervals
-	const baseline =
-		previousClose ?? rows[rows.length - 2]?.close ?? rows[0]?.close ?? 0;
-	const last = rows[rows.length - 1]?.close ?? 0;
+	const last = marketPrice ?? rows[rows.length - 1]?.close ?? 0;
 	const isUp = last >= baseline;
 	const lineColor = isUp ? UP_COLOR : DOWN_COLOR;
 	const gradTop = isUp ? UP_FILL_GRAD_TOP : DOWN_FILL_GRAD_TOP;
@@ -163,50 +164,36 @@ function buildVolumeTrace(rows: OHLCVRow[], xs: (string | number)[]): Data {
 
 function fmtDate(ts: number): string {
 	const d = new Date(ts);
-	const y = d.getFullYear();
-	const m = String(d.getMonth() + 1).padStart(2, "0");
-	const day = String(d.getDate()).padStart(2, "0");
-	return `${y}/${m}/${day}`;
+	return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
 }
 
 /** Format a Unix-ms timestamp as "YYYY-MM-DD HH:MM:SS" in the browser's local timezone.
  * Plotly.js interprets strings without a timezone suffix as local time. */
 function toLocalDateStr(ts: number): string {
 	const d = new Date(ts);
-	const p = (n: number, w = 2) => String(n).padStart(w, "0");
-	return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-export default function StockChart({
+interface LayoutParams {
+	rows: OHLCVRow[];
+	periodLabel: PeriodLabel;
+	showVolume: boolean;
+	priceTickFormat: string;
+	sessionStart?: number;
+	sessionEnd?: number;
+	xs: string[];
+}
+
+function buildLayout({
 	rows,
-	symbol,
 	periodLabel,
-	chartType,
 	showVolume,
-	previousClose,
+	priceTickFormat,
 	sessionStart,
 	sessionEnd,
-	currency,
-}: StockChartProps) {
-	if (rows.length === 0) return null;
-
-	const isJpy = currency === "JPY";
-	const priceTickFormat = isJpy ? ",.0f" : ",.2f";
-	const priceHoverFormat = isJpy ? "%{y:,.0f}" : "%{y:,.2f}";
-
-	// For 1W use categorical x-axis labels to avoid overnight gaps
+	xs,
+}: LayoutParams): Partial<Layout> {
 	const useCategory = periodLabel === "1W";
-	// Always format in local timezone (no "Z" suffix = Plotly treats as local time)
-	const xs = rows.map((r) => toLocalDateStr(r.timestamp));
-
-	const priceTraces: Data[] =
-		chartType === "Area"
-			? buildAreaTraces(rows, xs, symbol, previousClose, priceHoverFormat)
-			: [buildCandlestickTrace(rows, xs, symbol)];
-
-	const traces: Data[] = showVolume
-		? [...priceTraces, buildVolumeTrace(rows, xs)]
-		: priceTraces;
 
 	const xAxisCommon: Partial<LayoutAxis> = {
 		showgrid: false,
@@ -219,8 +206,6 @@ export default function StockChart({
 		tickfont: { color: SUBTEXT_COLOR, size: 11 },
 	};
 
-	// For 1D: fix x-axis to the full trading session so the right side doesn't
-	// collapse to the last data point during an active trading day.
 	const sessionRange =
 		periodLabel === "1D" && sessionStart && sessionEnd
 			? ([toLocalDateStr(sessionStart), toLocalDateStr(sessionEnd)] as [
@@ -229,32 +214,13 @@ export default function StockChart({
 				])
 			: undefined;
 
-	// 1W: 各日の最初のデータポイントのみtickを打つ
-	const w1DayTicks = useCategory
-		? (() => {
-				const seen = new Set<string>();
-				const vals: string[] = [];
-				const texts: string[] = [];
-				for (let i = 0; i < rows.length; i++) {
-					const d = new Date(rows[i]!.timestamp);
-					const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-					if (!seen.has(key)) {
-						seen.add(key);
-						vals.push(xs[i]!);
-						texts.push(
-							d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-						);
-					}
-				}
-				return { vals, texts };
-			})()
-		: null;
+	const weeklyTicks = useCategory ? buildWeeklyTicks(rows, xs) : null;
 
 	const xAxisExtra: Partial<LayoutAxis> = useCategory
 		? {
 				type: "category",
-				tickvals: w1DayTicks!.vals,
-				ticktext: w1DayTicks!.texts,
+				tickvals: weeklyTicks!.vals,
+				ticktext: weeklyTicks!.texts,
 			}
 		: {
 				rangebreaks: getRangebreaks(rows, periodLabel),
@@ -273,7 +239,7 @@ export default function StockChart({
 
 	const dateRangeTitle = `${fmtDate(rows[0]!.timestamp)} 〜 ${fmtDate(rows[rows.length - 1]!.timestamp)}`;
 
-	const layout: Partial<Layout> = {
+	return {
 		title: {
 			text: dateRangeTitle,
 			font: { color: SUBTEXT_COLOR, size: 14, family: FONT_FAMILY },
@@ -307,6 +273,77 @@ export default function StockChart({
 		},
 		showlegend: false,
 	};
+}
+
+/** 1W用: 各日の最初のデータポイントだけtickを立てる */
+function buildWeeklyTicks(
+	rows: OHLCVRow[],
+	xs: string[],
+): { vals: string[]; texts: string[] } {
+	const seen = new Set<string>();
+	const vals: string[] = [];
+	const texts: string[] = [];
+	for (let i = 0; i < rows.length; i++) {
+		const d = new Date(rows[i]!.timestamp);
+		const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+		if (!seen.has(key)) {
+			seen.add(key);
+			vals.push(xs[i]!);
+			texts.push(
+				d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+			);
+		}
+	}
+	return { vals, texts };
+}
+
+export default function StockChart({
+	rows,
+	symbol,
+	periodLabel,
+	chartType,
+	showVolume,
+	previousClose,
+	regularMarketPrice,
+	sessionStart,
+	sessionEnd,
+	currency,
+}: StockChartProps) {
+	if (rows.length === 0) return null;
+
+	const isJpy = currency === "JPY";
+	const priceTickFormat = isJpy ? ",.0f" : ",.2f";
+	const priceHoverFormat = isJpy ? "%{y:,.0f}" : "%{y:,.2f}";
+
+	// Always format in local timezone (no "Z" suffix = Plotly treats as local time)
+	const xs = rows.map((r) => toLocalDateStr(r.timestamp));
+
+	const baseline = getColorBaseline(rows, previousClose);
+	const priceTraces: Data[] =
+		chartType === "Area"
+			? buildAreaTraces(
+					rows,
+					xs,
+					symbol,
+					baseline,
+					priceHoverFormat,
+					regularMarketPrice,
+				)
+			: [buildCandlestickTrace(rows, xs, symbol)];
+
+	const traces: Data[] = showVolume
+		? [...priceTraces, buildVolumeTrace(rows, xs)]
+		: priceTraces;
+
+	const layout = buildLayout({
+		rows,
+		periodLabel,
+		showVolume,
+		priceTickFormat,
+		sessionStart,
+		sessionEnd,
+		xs,
+	});
 
 	return (
 		<Plot

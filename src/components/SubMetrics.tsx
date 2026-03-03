@@ -1,5 +1,6 @@
-import { SUBTEXT_COLOR, TEXT_COLOR } from "../constants";
+import { DIVIDER_COLOR, SUBTEXT_COLOR, TEXT_COLOR } from "../constants";
 import type { OHLCVRow, StockMeta } from "../types/stock";
+import { formatPrice } from "../utils/formatPrice";
 
 interface SubMetricsProps {
 	rows: OHLCVRow[];
@@ -11,35 +12,31 @@ interface MetricItem {
 	value: string;
 }
 
-function fmt(n: number, isJpy: boolean): string {
-	const digits = isJpy ? 0 : 2;
-	return n.toLocaleString(undefined, {
-		minimumFractionDigits: digits,
-		maximumFractionDigits: digits,
-	});
-}
-
 export default function SubMetrics({ rows, meta }: SubMetricsProps) {
 	if (rows.length === 0) return null;
 
 	const isJpy = meta.currency === "JPY";
-	const periodHigh = Math.max(...rows.map((r) => r.high));
-	const periodLow = Math.min(...rows.map((r) => r.low));
+	const periodHigh = rows.reduce((acc, r) => Math.max(acc, r.high), -Infinity);
+	const periodLow = rows.reduce((acc, r) => Math.min(acc, r.low), Infinity);
 	const latestVolume = rows[rows.length - 1]!.volume;
 
 	const items: MetricItem[] = [
-		{ label: "Period High", value: fmt(periodHigh, isJpy) },
-		{ label: "Period Low", value: fmt(periodLow, isJpy) },
+		{ label: "Period High", value: formatPrice(periodHigh, isJpy) },
+		{ label: "Period Low", value: formatPrice(periodLow, isJpy) },
 		{ label: "Latest Volume", value: latestVolume.toLocaleString() },
 		{
 			label: "52W High",
 			value:
-				meta.fiftyTwoWeekHigh != null ? fmt(meta.fiftyTwoWeekHigh, isJpy) : "—",
+				meta.fiftyTwoWeekHigh != null
+					? formatPrice(meta.fiftyTwoWeekHigh, isJpy)
+					: "—",
 		},
 		{
 			label: "52W Low",
 			value:
-				meta.fiftyTwoWeekLow != null ? fmt(meta.fiftyTwoWeekLow, isJpy) : "—",
+				meta.fiftyTwoWeekLow != null
+					? formatPrice(meta.fiftyTwoWeekLow, isJpy)
+					: "—",
 		},
 	];
 
@@ -50,7 +47,7 @@ export default function SubMetrics({ rows, meta }: SubMetricsProps) {
 				flexWrap: "wrap",
 				gap: "8px 24px",
 				padding: "6px 4px 4px",
-				borderTop: "1px solid rgba(100,116,139,0.15)",
+				borderTop: `1px solid ${DIVIDER_COLOR}`,
 			}}
 		>
 			{items.map(({ label, value }) => (

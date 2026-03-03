@@ -1,18 +1,20 @@
 import {
 	DOWN_COLOR,
 	DOWN_FILL,
+	HOVER_BORDER,
 	PERIODS,
 	SUBTEXT_COLOR,
 	TEXT_COLOR,
 	UP_COLOR,
 	UP_FILL,
 } from "../constants";
+import type { PeriodLabel } from "../types/stock";
 
-const PERIOD_LABELS = Object.keys(PERIODS) as string[];
+const PERIOD_LABELS = Object.keys(PERIODS) as PeriodLabel[];
 
 interface PeriodSelectorProps {
-	value: string;
-	onChange: (period: string) => void;
+	value: PeriodLabel;
+	onChange: (period: PeriodLabel) => void;
 	isUp?: boolean;
 }
 
@@ -37,7 +39,7 @@ export default function PeriodSelector({
 							background: active ? accentFill : "transparent",
 							border: active
 								? `1px solid ${accentColor}`
-								: "1px solid rgba(100,116,139,0.20)",
+								: `1px solid ${HOVER_BORDER}`,
 							borderRadius: 6,
 							color: active ? TEXT_COLOR : SUBTEXT_COLOR,
 							cursor: "pointer",

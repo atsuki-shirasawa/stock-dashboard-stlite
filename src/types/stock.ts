@@ -1,6 +1,7 @@
 export interface StockMeta {
 	shortName?: string;
 	previousClose?: number;
+	regularMarketPrice?: number; // 現在の市場価格（全期間で色判定に使用）
 	currency?: string;
 	fiftyTwoWeekHigh?: number;
 	fiftyTwoWeekLow?: number;
@@ -23,3 +24,4 @@ export interface ChartData {
 }
 
 export type ChartType = "Candlestick" | "Area";
+export type PeriodLabel = "1D" | "1W" | "1M" | "6M" | "1Y" | "5Y" | "10Y";
