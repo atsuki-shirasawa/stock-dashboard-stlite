@@ -1,8 +1,8 @@
 import { CACHE_TTL_MS, PERIOD_DELTA_MS, PERIODS } from "../constants";
 import type { ChartData, PeriodLabel, StockMeta, YfMeta } from "../types/stock";
 
-const CORS_PROXY = "https://corsproxy.io/?url=";
-const YF_BASE = "https://query1.finance.yahoo.com/v8/finance/chart";
+const YF_BASE = "https://query2.finance.yahoo.com/v8/finance/chart";
+const YF_BASE_FALLBACK = "https://query1.finance.yahoo.com/v8/finance/chart";
 const YF_HEADERS = {
 	"User-Agent":
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
@@ -10,6 +10,11 @@ const YF_HEADERS = {
 		"Chrome/120.0.0.0 Safari/537.36",
 	Accept: "application/json",
 };
+
+const CORS_PROXIES: Array<(url: string) => string> = [
+	(url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+	(url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+];
 
 interface YfQuote {
 	open?: (number | null)[];
@@ -29,11 +34,44 @@ interface YfResponse {
 	chart?: { result?: YfResult[]; error?: unknown };
 }
 
+let cachedCrumb: string | null = null;
+let crumbFetchedAt = 0;
+const CRUMB_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+async function fetchCrumb(signal?: AbortSignal): Promise<string | null> {
+	if (cachedCrumb && Date.now() - crumbFetchedAt < CRUMB_TTL_MS) {
+		return cachedCrumb;
+	}
+	const crumbEndpoint = "https://query2.finance.yahoo.com/v1/test/getcrumb";
+	for (const buildProxy of CORS_PROXIES) {
+		try {
+			const resp = await fetch(buildProxy(crumbEndpoint), {
+				headers: YF_HEADERS,
+				signal,
+			});
+			if (resp.ok) {
+				const text = (await resp.text()).trim();
+				// crumb is a short alphanumeric string; guard against HTML responses
+				if (text && text.length < 64 && !text.startsWith("<")) {
+					cachedCrumb = text;
+					crumbFetchedAt = Date.now();
+					return cachedCrumb;
+				}
+			}
+		} catch {
+			// try next proxy
+		}
+	}
+	return null;
+}
+
 function buildYfUrl(
 	symbol: string,
 	periodLabel: PeriodLabel,
 	endDate?: Date,
 	cacheBust?: number,
+	crumb?: string | null,
+	base = YF_BASE,
 ): string {
 	const cfg = PERIODS[periodLabel];
 	if (!cfg) throw new Error(`Unknown period: ${periodLabel}`);
@@ -41,18 +79,21 @@ function buildYfUrl(
 
 	let yfUrl: string;
 	if (!endDate) {
-		yfUrl = `${YF_BASE}/${symbol}?range=${cfg.period}&interval=${interval}`;
+		yfUrl = `${base}/${symbol}?range=${cfg.period}&interval=${interval}`;
 	} else {
 		const endMs = endDate.getTime();
 		const startMs = endMs - (PERIOD_DELTA_MS[periodLabel] ?? 0);
 		const period1 = Math.floor(startMs / 1000);
 		const period2 = Math.floor(endMs / 1000);
-		yfUrl = `${YF_BASE}/${symbol}?period1=${period1}&period2=${period2}&interval=${interval}`;
+		yfUrl = `${base}/${symbol}?period1=${period1}&period2=${period2}&interval=${interval}`;
 	}
 	if (cacheBust !== undefined) {
 		yfUrl += `&_t=${cacheBust}`;
 	}
-	return CORS_PROXY + encodeURIComponent(yfUrl);
+	if (crumb) {
+		yfUrl += `&crumb=${encodeURIComponent(crumb)}`;
+	}
+	return yfUrl;
 }
 
 function parseMeta(meta: YfMeta): StockMeta {
@@ -128,6 +169,46 @@ function setCached(key: string, data: ChartData): void {
 	}
 }
 
+async function fetchWithFallback(
+	symbol: string,
+	periodLabel: PeriodLabel,
+	endDate?: Date,
+	signal?: AbortSignal,
+): Promise<Response> {
+	const cacheBust = Math.floor(Date.now() / CACHE_TTL_MS);
+	const crumb = await fetchCrumb(signal);
+
+	// Try each combination of (base, proxy) until one succeeds
+	const bases = [YF_BASE, YF_BASE_FALLBACK];
+	for (const base of bases) {
+		const yfUrl = buildYfUrl(
+			symbol,
+			periodLabel,
+			endDate,
+			cacheBust,
+			crumb,
+			base,
+		);
+		for (const buildProxy of CORS_PROXIES) {
+			try {
+				const resp = await fetch(buildProxy(yfUrl), {
+					headers: YF_HEADERS,
+					signal,
+				});
+				if (resp.ok) return resp;
+			} catch (err) {
+				// AbortError should propagate immediately
+				if (err instanceof DOMException && err.name === "AbortError") throw err;
+				// otherwise try next combination
+			}
+		}
+	}
+
+	throw new Error(
+		"All Yahoo Finance endpoints returned errors. The API may be temporarily unavailable.",
+	);
+}
+
 export async function fetchChart(
 	symbol: string,
 	periodLabel: PeriodLabel,
@@ -138,17 +219,7 @@ export async function fetchChart(
 	const cached = getCached(key);
 	if (cached) return cached;
 
-	// Pass cacheBust inside the Yahoo Finance URL (before encoding) so corsproxy's cache key changes every CACHE_TTL_MS
-	const url = buildYfUrl(
-		symbol,
-		periodLabel,
-		endDate,
-		Math.floor(Date.now() / CACHE_TTL_MS),
-	);
-	const resp = await fetch(url, { headers: YF_HEADERS, signal });
-	if (!resp.ok) {
-		throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-	}
+	const resp = await fetchWithFallback(symbol, periodLabel, endDate, signal);
 
 	const json = (await resp.json()) as YfResponse;
 	const chartResults = json?.chart?.result;
