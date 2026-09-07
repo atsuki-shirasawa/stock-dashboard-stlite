@@ -1,4 +1,4 @@
-import type { Data, Layout, LayoutAxis, RangeBreak } from "plotly.js";
+import type { Data, Layout, LayoutAxis } from "plotly.js";
 import PlotlyInstance from "plotly.js-finance-dist";
 import createPlotlyComponent from "react-plotly.js/factory";
 import type { Theme } from "../constants";
@@ -8,6 +8,9 @@ import type { ChartType, OHLCVRow, PeriodLabel } from "../types/stock";
 import { getColorBaseline } from "../utils/baseline";
 
 const Plot = createPlotlyComponent(PlotlyInstance);
+
+/** plotly.js v4 no longer exports a standalone `RangeBreak`; derive it from LayoutAxis. */
+type RangeBreak = NonNullable<LayoutAxis["rangebreaks"]>[number];
 
 interface StockChartProps {
 	rows: OHLCVRow[];
