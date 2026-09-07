@@ -77,9 +77,24 @@ Then point the app at it:
 echo "VITE_YF_PROXY=https://yf-proxy.<subdomain>.workers.dev" > .env.local
 ```
 
-The Worker only proxies `query1/query2.finance.yahoo.com`, so it cannot be used
-as an open relay. Without `VITE_YF_PROXY` the app falls back to the public
-proxies. See below for wiring it up in CI.
+Without `VITE_YF_PROXY` the app falls back to the public proxies. See below for
+wiring it up in CI.
+
+**Two independent allowlists guard the Worker:**
+
+- `ALLOWED_HOSTS` (in `worker/src/index.ts`) limits what it will fetch to
+  `query1/query2.finance.yahoo.com`, so it can never be used as an open relay.
+- `ALLOWED_ORIGINS` (in `worker/wrangler.toml`) limits which browser origins may
+  call it. `VITE_YF_PROXY` is inlined into the public bundle, so without this
+  anyone who finds the URL can spend your quota. Set it to your site's origin:
+
+  ```toml
+  [vars]
+  ALLOWED_ORIGINS = "https://<user>.github.io,http://localhost:5173"
+  ```
+
+  Leave it empty to accept any origin. Requests from a non-listed origin — and
+  requests with no `Origin` header at all, i.e. non-browser callers — get 403.
 
 ## Local development
 

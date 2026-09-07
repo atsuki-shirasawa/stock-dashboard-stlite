@@ -2,5 +2,15 @@ name = "yf-proxy"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
 
+[vars]
+# Browser origins allowed to call this Worker, comma-separated. Leave empty to
+# accept any origin (convenient, but anyone who finds the URL can spend your
+# quota). For an internal dashboard, set it to the site's own origin:
+#   ALLOWED_ORIGINS = "https://<user>.github.io,http://localhost:5173"
+# Note: these are *origins* only — no path, no trailing slash. Include
+# http://localhost:5173 if you also want `npm run dev` to reach the deployed
+# Worker; otherwise keep a local .env.local pointing at `wrangler dev`.
+ALLOWED_ORIGINS = ""
+
 # Optional: pin to a custom domain instead of *.workers.dev
 # routes = [{ pattern = "yf-proxy.example.com", custom_domain = true }]

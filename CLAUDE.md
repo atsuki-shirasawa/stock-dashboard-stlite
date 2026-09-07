@@ -46,7 +46,7 @@ URL params (readParams)
 - **All candidate endpoints race** (`Promise.any`) with a per-attempt timeout; response parsing happens *inside* each attempt so a proxy returning HTTP 200 with an HTML error page loses the race instead of poisoning the result.
 - **`cacheBust` granularity equals the period TTL** (`Math.floor(Date.now() / ttlMs)`). It is embedded in the Yahoo URL, so it also rotates the *upstream* proxy cache key — matching the two means a proxy cache entry stays warm for exactly as long as the client considers the data fresh.
 - **The crumb never blocks the happy path.** `fetchCrumb` is started but not awaited; the chart is attempted without one first, and the crumb is only awaited on failure.
-- **`worker/src/index.ts` allowlists Yahoo hosts.** Do not relax `ALLOWED_HOSTS` — without it the Worker is an open relay.
+- **`worker/src/index.ts` has two allowlists.** `ALLOWED_HOSTS` (compile-time) restricts what may be fetched — do not relax it, without it the Worker is an open relay. `ALLOWED_ORIGINS` (a `wrangler.toml` var, empty = any) restricts which browser origins may call it; CORS headers are re-applied per request on the cache-hit path, so a cached copy is never served with another origin's `Access-Control-Allow-Origin`.
 
 ### Environment variables
 

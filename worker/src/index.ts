@@ -11,6 +11,15 @@
  * Usage: GET /?url=<encoded Yahoo URL>&ttl=<seconds>
  */
 
+export interface Env {
+	/**
+	 * Comma-separated list of browser origins allowed to call this Worker, e.g.
+	 * "https://acme.github.io". Empty/unset means any origin — convenient, but it
+	 * lets anyone who finds the URL spend your quota. Set it in wrangler.toml.
+	 */
+	ALLOWED_ORIGINS?: string;
+}
+
 /** Only these hosts may be proxied — without this the Worker is an open relay. */
 const ALLOWED_HOSTS = new Set([
 	"query1.finance.yahoo.com",
@@ -32,19 +41,46 @@ const UPSTREAM_HEADERS = {
 	Accept: "application/json,text/plain,*/*",
 };
 
-function corsHeaders(): Record<string, string> {
+/**
+ * Returns the value for Access-Control-Allow-Origin, or null when the caller is
+ * not allowed. With no allowlist configured every origin is accepted.
+ */
+function resolveOrigin(request: Request, env: Env): string | null {
+	const allowed = (env.ALLOWED_ORIGINS ?? "")
+		.split(",")
+		.map((o) => o.trim())
+		.filter(Boolean);
+	if (allowed.length === 0) return "*";
+
+	// A browser always sends Origin on a cross-origin fetch; its absence means a
+	// non-browser caller, which an allowlisted deployment has no reason to serve.
+	const origin = request.headers.get("Origin");
+	if (!origin) return null;
+	return allowed.includes(origin) ? origin : null;
+}
+
+function corsHeaders(allowOrigin: string): Record<string, string> {
 	return {
-		"Access-Control-Allow-Origin": "*",
+		"Access-Control-Allow-Origin": allowOrigin,
 		"Access-Control-Allow-Methods": "GET, OPTIONS",
 		"Access-Control-Allow-Headers": "*",
 		"Access-Control-Max-Age": "86400",
+		// The allowed origin is echoed back, so caches must key on it.
+		Vary: "Origin",
 	};
 }
 
-function errorResponse(status: number, message: string): Response {
+function errorResponse(
+	status: number,
+	message: string,
+	allowOrigin: string | null,
+): Response {
 	return new Response(JSON.stringify({ error: message }), {
 		status,
-		headers: { ...corsHeaders(), "Content-Type": "application/json" },
+		headers: {
+			...(allowOrigin ? corsHeaders(allowOrigin) : {}),
+			"Content-Type": "application/json",
+		},
 	});
 }
 
@@ -55,25 +91,37 @@ function clampTtl(raw: string | null): number {
 }
 
 export default {
-	async fetch(request: Request, _env: unknown, ctx: ExecutionContext) {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+		const allowOrigin = resolveOrigin(request, env);
+		if (!allowOrigin) {
+			return errorResponse(403, "Origin not allowed", null);
+		}
+
 		if (request.method === "OPTIONS") {
-			return new Response(null, { status: 204, headers: corsHeaders() });
+			return new Response(null, {
+				status: 204,
+				headers: corsHeaders(allowOrigin),
+			});
 		}
 		if (request.method !== "GET") {
-			return errorResponse(405, "Method not allowed");
+			return errorResponse(405, "Method not allowed", allowOrigin);
 		}
 
 		const target = new URL(request.url).searchParams.get("url");
-		if (!target) return errorResponse(400, "Missing ?url=");
+		if (!target) return errorResponse(400, "Missing ?url=", allowOrigin);
 
 		let upstream: URL;
 		try {
 			upstream = new URL(target);
 		} catch {
-			return errorResponse(400, "Malformed ?url=");
+			return errorResponse(400, "Malformed ?url=", allowOrigin);
 		}
 		if (upstream.protocol !== "https:" || !ALLOWED_HOSTS.has(upstream.hostname)) {
-			return errorResponse(403, `Host not allowed: ${upstream.hostname}`);
+			return errorResponse(
+				403,
+				`Host not allowed: ${upstream.hostname}`,
+				allowOrigin,
+			);
 		}
 
 		const ttl = clampTtl(new URL(request.url).searchParams.get("ttl"));
@@ -85,8 +133,12 @@ export default {
 
 		const hit = await cache.match(cacheKey);
 		if (hit) {
+			// CORS headers are re-applied per request: the cached copy may have been
+			// stored for a different origin.
 			const headers = new Headers(hit.headers);
-			for (const [k, v] of Object.entries(corsHeaders())) headers.set(k, v);
+			for (const [k, v] of Object.entries(corsHeaders(allowOrigin))) {
+				headers.set(k, v);
+			}
 			headers.set("X-Proxy-Cache", "HIT");
 			return new Response(hit.body, { status: hit.status, headers });
 		}
@@ -98,12 +150,16 @@ export default {
 				cf: { cacheTtl: ttl, cacheEverything: true },
 			});
 		} catch (err) {
-			return errorResponse(502, `Upstream fetch failed: ${String(err)}`);
+			return errorResponse(
+				502,
+				`Upstream fetch failed: ${String(err)}`,
+				allowOrigin,
+			);
 		}
 
 		const body = await resp.text();
 		const headers = new Headers({
-			...corsHeaders(),
+			...corsHeaders(allowOrigin),
 			"Content-Type": resp.headers.get("Content-Type") ?? "application/json",
 			"X-Proxy-Cache": "MISS",
 		});
@@ -125,4 +181,4 @@ export default {
 
 		return new Response(body, { status: resp.status, headers });
 	},
-} satisfies ExportedHandler;
+} satisfies ExportedHandler<Env>;
