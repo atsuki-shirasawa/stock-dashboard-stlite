@@ -36,6 +36,12 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Optional self-hosted CORS proxy (see worker/). Set it as a repository
+          # *variable* (Settings -> Secrets and variables -> Actions -> Variables),
+          # not a secret: Vite inlines it into the public bundle, so it is not
+          # confidential. Unset simply falls back to the public CORS proxies.
+          VITE_YF_PROXY: ${{ vars.VITE_YF_PROXY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

@@ -1,0 +1,56 @@
+name: Deploy Worker
+
+# Deploys the CORS proxy in worker/ to Cloudflare Workers.
+#
+# Opt-in — this job is skipped until you set the repository variable
+# DEPLOY_WORKER to "true". Before enabling it, add these repository secrets:
+#   CLOUDFLARE_API_TOKEN   (Workers Scripts: Edit permission)
+#   CLOUDFLARE_ACCOUNT_ID
+# Then point the site at the deployed URL by setting the repository variable
+# VITE_YF_PROXY, which deploy.yml passes to the Vite build.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "worker/**"
+      - ".github/workflows/deploy-worker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.DEPLOY_WORKER == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Deploy
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

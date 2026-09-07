@@ -77,10 +77,9 @@ Then point the app at it:
 echo "VITE_YF_PROXY=https://yf-proxy.<subdomain>.workers.dev" > .env.local
 ```
 
-For the deployed site, set `VITE_YF_PROXY` as a build-time variable in the
-GitHub Actions workflow. The Worker only proxies `query1/query2.finance.yahoo.com`
-so it cannot be used as an open relay. Without `VITE_YF_PROXY` the app falls back
-to the public proxies.
+The Worker only proxies `query1/query2.finance.yahoo.com`, so it cannot be used
+as an open relay. Without `VITE_YF_PROXY` the app falls back to the public
+proxies. See below for wiring it up in CI.
 
 ## Local development
 
@@ -100,6 +99,27 @@ npm run format   # auto-format with Biome
 
 ## Deployment
 
-Pushing to `main` triggers GitHub Actions, which lints, builds, and deploys `dist/` to GitHub Pages automatically.
+Pushing to `main` triggers `.github/workflows/deploy.yml`, which lints, builds, and deploys `dist/` to GitHub Pages automatically.
 
 > **GitHub Pages setup**: go to Settings → Pages → Source and select **GitHub Actions**.
+
+### Wiring the proxy into CI
+
+Under **Settings → Secrets and variables → Actions**:
+
+| Name                    | Kind     | Purpose                                                          |
+| ----------------------- | -------- | ---------------------------------------------------------------- |
+| `VITE_YF_PROXY`         | Variable | Worker URL, inlined into the bundle by `deploy.yml`              |
+| `DEPLOY_WORKER`         | Variable | Set to `true` to enable `.github/workflows/deploy-worker.yml`    |
+| `CLOUDFLARE_API_TOKEN`  | Secret   | Workers Scripts: Edit permission                                  |
+| `CLOUDFLARE_ACCOUNT_ID` | Secret   | Cloudflare account ID                                             |
+
+`VITE_YF_PROXY` is a **variable, not a secret** — Vite inlines it into the public
+bundle, so it is visible to anyone who opens the site. That is fine (the Worker
+allowlists Yahoo hosts), but it does mean the endpoint is publicly callable; add
+[Cloudflare rate limiting](https://developers.cloudflare.com/waf/rate-limiting-rules/)
+if that matters to you.
+
+`deploy-worker.yml` only runs when `worker/**` changes, and stays skipped until
+`DEPLOY_WORKER` is set — until then you can deploy manually with
+`cd worker && npx wrangler deploy`.

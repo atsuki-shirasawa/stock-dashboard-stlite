@@ -50,7 +50,12 @@ URL params (readParams)
 
 ### Environment variables
 
-- `VITE_YF_PROXY` — optional self-hosted proxy base URL. Tried alone before the public proxies. Typed in `src/vite-env.d.ts`; example in `.env.example`.
+- `VITE_YF_PROXY` — optional self-hosted proxy base URL. Tried alone before the public proxies. Typed in `src/vite-env.d.ts`; example in `.env.example`. In CI it comes from the repo **variable** (not secret) of the same name, passed to the Build step in `deploy.yml` — Vite inlines it into the public bundle, so it is not confidential.
+
+### CI
+
+- `.github/workflows/deploy.yml` — lint + build + GitHub Pages deploy on push to `main`.
+- `.github/workflows/deploy-worker.yml` — deploys `worker/`. Gated on the repo variable `DEPLOY_WORKER == 'true'` so it stays skipped (not failed) until Cloudflare credentials are configured; only triggers on `worker/**` changes.
 
 ### URL params
 
