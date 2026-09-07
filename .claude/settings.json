@@ -1,0 +1,23 @@
+{
+	"hooks": {
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/biome-fix.sh\"",
+						"statusMessage": "Biome で整形中...",
+						"timeout": 30
+					},
+					{
+						"type": "command",
+						"command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/no-hardcoded-colors.sh\"",
+						"statusMessage": "カラートークン規約を確認中...",
+						"timeout": 10
+					}
+				]
+			}
+		]
+	}
+}
