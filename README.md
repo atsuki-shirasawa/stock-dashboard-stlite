@@ -68,6 +68,8 @@ that dependency and gives you the shared cache:
 ```bash
 cd worker
 npm install
+# set ALLOWED_ORIGINS in wrangler.toml first (see below)
+npx wrangler login
 npx wrangler deploy      # prints https://yf-proxy.<subdomain>.workers.dev
 ```
 

@@ -10,7 +10,7 @@ compatibility_date = "2025-09-01"
 # Note: these are *origins* only — no path, no trailing slash. Include
 # http://localhost:5173 if you also want `npm run dev` to reach the deployed
 # Worker; otherwise keep a local .env.local pointing at `wrangler dev`.
-ALLOWED_ORIGINS = ""
+ALLOWED_ORIGINS = "https://atsuki-shirasawa.github.io,http://localhost:5173"
 
 # Optional: pin to a custom domain instead of *.workers.dev
 # routes = [{ pattern = "yf-proxy.example.com", custom_domain = true }]
