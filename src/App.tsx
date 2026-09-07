@@ -177,6 +177,30 @@ function AppInner({
 										{data.meta.timezone ? ` ${data.meta.timezone}` : ""}
 									</span>
 								)}
+								{data.stale && (
+									<span
+										title="Yahoo Finance is unreachable — showing the last successful fetch"
+										style={{
+											fontSize: 11,
+											color: DOWN_COLOR,
+											background: ERROR_BG,
+											border: `1px solid ${ERROR_BORDER}`,
+											borderRadius: 4,
+											padding: "1px 6px",
+										}}
+									>
+										Cached
+										{data.fetchedAt != null
+											? ` · ${new Date(data.fetchedAt).toLocaleString("en-US", {
+													month: "short",
+													day: "numeric",
+													hour: "2-digit",
+													minute: "2-digit",
+													hour12: false,
+												})}`
+											: ""}
+									</span>
+								)}
 							</div>
 						</div>
 						<div

@@ -1,3 +1,11 @@
 # Node.js
 node_modules/
 dist/
+
+# Local env (VITE_YF_PROXY etc.) — .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Cloudflare Workers
+.wrangler/

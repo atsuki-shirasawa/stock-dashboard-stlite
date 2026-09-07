@@ -1,0 +1,6 @@
+name = "yf-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# Optional: pin to a custom domain instead of *.workers.dev
+# routes = [{ pattern = "yf-proxy.example.com", custom_domain = true }]

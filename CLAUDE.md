@@ -24,18 +24,33 @@ No test suite exists in this project.
 URL params (readParams)
   → useState lazy-init in App
   → fetchChart (yahooFinance.ts)
-      → sessionStorage cache (5 min TTL)
-      → corsproxy.io → Yahoo Finance v8/chart API
+      → localStorage cache (per-period TTL, stale-while-error)
+      → optional self-hosted Worker proxy (VITE_YF_PROXY)
+      → public CORS proxies (raced in parallel) → Yahoo Finance v8/chart API
   → ChartData { rows: OHLCVRow[], meta: StockMeta }
   → PriceHeader / StockChart / SubMetrics
 ```
 
 ### Key files
 
-- `src/constants.ts` — all color tokens, period config, URL param key mappings, cache TTL
+- `src/constants.ts` — all color tokens, period config, URL param key mappings, cache TTLs (`PERIOD_CACHE_TTL_MS`, `STALE_MAX_AGE_MS`), `FETCH_TIMEOUT_MS`
 - `src/types/stock.ts` — shared types: `OHLCVRow`, `StockMeta`, `ChartData`, `ChartType`
-- `src/api/yahooFinance.ts` — fetch + parse + sessionStorage cache; `fetchChart(symbol, periodLabel, endDate?, signal?)`. corsproxy.io caches responses for 1 hour by default, so `buildYfUrl` accepts a `cacheBust` param (`Math.floor(Date.now() / CACHE_TTL_MS)`) embedded inside the Yahoo Finance URL to rotate the corsproxy cache key every 5 minutes
+- `src/api/yahooFinance.ts` — fetch + parse + cache; `fetchChart(symbol, periodLabel, endDate?, signal?)`
 - `src/App.tsx` — URL state management (`readParams` / `writeParams`), abort controller, single `load` callback
+- `worker/` — optional Cloudflare Worker CORS proxy with a viewer-shared edge cache. Separate npm project; `cd worker && npm install && npx wrangler deploy`
+
+### Data layer invariants (`yahooFinance.ts`)
+
+- **Cache is `localStorage`, not `sessionStorage`** — the dashboard is embedded in iframes, which start a fresh session on every reload. Falls back to `sessionStorage`, then to no cache at all (private mode / blocked storage).
+- **Expired entries are never deleted on read.** They are the fallback served when every endpoint fails (`stale: true` on `ChartData`, up to `STALE_MAX_AGE_MS`). Only `AbortError` propagates untouched.
+- **All candidate endpoints race** (`Promise.any`) with a per-attempt timeout; response parsing happens *inside* each attempt so a proxy returning HTTP 200 with an HTML error page loses the race instead of poisoning the result.
+- **`cacheBust` granularity equals the period TTL** (`Math.floor(Date.now() / ttlMs)`). It is embedded in the Yahoo URL, so it also rotates the *upstream* proxy cache key — matching the two means a proxy cache entry stays warm for exactly as long as the client considers the data fresh.
+- **The crumb never blocks the happy path.** `fetchCrumb` is started but not awaited; the chart is attempted without one first, and the crumb is only awaited on failure.
+- **`worker/src/index.ts` allowlists Yahoo hosts.** Do not relax `ALLOWED_HOSTS` — without it the Worker is an open relay.
+
+### Environment variables
+
+- `VITE_YF_PROXY` — optional self-hosted proxy base URL. Tried alone before the public proxies. Typed in `src/vite-env.d.ts`; example in `.env.example`.
 
 ### URL params
 

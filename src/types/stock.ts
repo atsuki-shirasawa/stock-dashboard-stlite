@@ -92,6 +92,10 @@ export interface OHLCVRow {
 export interface ChartData {
 	rows: OHLCVRow[];
 	meta: StockMeta;
+	/** Unix ms the payload was actually fetched from Yahoo. */
+	fetchedAt?: number;
+	/** True when every endpoint failed and this is an expired cache entry. */
+	stale?: boolean;
 }
 
 export type ChartType = "Candlestick" | "Area";

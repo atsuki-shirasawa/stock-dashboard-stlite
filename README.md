@@ -13,7 +13,8 @@ A client-side stock dashboard built with React + Vite, running entirely in the b
 - Timestamps displayed in the browser's local timezone
 - Shareable URLs — symbol, period, chart type, and date are all synced to query params
 - Works for US and Japanese stocks (e.g. `AAPL`, `7203.T`)
-- 5-minute client-side cache via `sessionStorage`
+- Resilient data layer: parallel endpoint racing, per-request timeouts, and a
+  `localStorage` cache that keeps serving the last good data when the API is down
 
 ## URL parameters
 
@@ -29,13 +30,57 @@ A client-side stock dashboard built with React + Vite, running entirely in the b
 
 | Layer        | Library                                                                                                                     |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| UI framework | [React 18](https://react.dev/) + TypeScript                                                                                 |
-| Build tool   | [Vite 5](https://vitejs.dev/)                                                                                               |
+| UI framework | [React 19](https://react.dev/) + TypeScript                                                                                 |
+| Build tool   | [Vite 8](https://vitejs.dev/)                                                                                               |
 | Charts       | [Plotly.js](https://plotly.com/javascript/) (finance-dist) via [react-plotly.js](https://github.com/plotly/react-plotly.js) |
 | Icons        | [Lucide React](https://lucide.dev/)                                                                                         |
 | Linter       | [Biome](https://biomejs.dev/)                                                                                               |
-| Data         | [Yahoo Finance chart API](https://query1.finance.yahoo.com/) via [corsproxy.io](https://corsproxy.io/)                      |
+| Data         | [Yahoo Finance chart API](https://query1.finance.yahoo.com/) via a CORS proxy (see below)                                   |
 | Deployment   | GitHub Actions → GitHub Pages                                                                                               |
+
+## Data fetching and caching
+
+The Yahoo Finance chart API sends no CORS headers, so a browser cannot call it
+directly and every request has to go through a proxy.
+
+**Layers, from cheapest to most expensive:**
+
+1. **`localStorage` cache** — per browser. TTL varies by period (1 minute for
+   `1D`, 5 minutes for daily-interval ranges, up to 6 hours for `10Y`), so
+   long-range charts are not refetched needlessly.
+2. **Shared edge cache** — the optional Cloudflare Worker in `worker/`. Its cache
+   is shared by *every* viewer, so the first person to open a symbol warms it for
+   everyone else. Browser storage is per-origin and per-browser and can never do
+   this.
+3. **Live fetch** — all candidate endpoints (2 Yahoo hosts × the configured
+   proxies) race in parallel with a 6-second per-request timeout, so one hanging
+   proxy no longer stalls the load.
+
+If every endpoint fails, an expired cache entry is served instead of an error
+(up to 7 days old) and the header shows a `Cached · <time>` badge.
+
+### Self-hosted proxy (recommended)
+
+The public CORS proxies are rate-limited and unreliable — `corsproxy.io` now
+requires an API key for anonymous traffic. Deploying the bundled Worker removes
+that dependency and gives you the shared cache:
+
+```bash
+cd worker
+npm install
+npx wrangler deploy      # prints https://yf-proxy.<subdomain>.workers.dev
+```
+
+Then point the app at it:
+
+```bash
+echo "VITE_YF_PROXY=https://yf-proxy.<subdomain>.workers.dev" > .env.local
+```
+
+For the deployed site, set `VITE_YF_PROXY` as a build-time variable in the
+GitHub Actions workflow. The Worker only proxies `query1/query2.finance.yahoo.com`
+so it cannot be used as an open relay. Without `VITE_YF_PROXY` the app falls back
+to the public proxies.
 
 ## Local development
 

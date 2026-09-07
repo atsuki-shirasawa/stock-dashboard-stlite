@@ -136,5 +136,31 @@ export const DEFAULT_SYMBOL = "AAPL";
 export const DEFAULT_PERIOD: PeriodLabel = "1Y";
 export const DEFAULT_CHART = "Area";
 
-// Cache TTL in milliseconds (5 minutes, same as @st.cache_data(ttl=300))
+// Default cache TTL in milliseconds (5 minutes, same as @st.cache_data(ttl=300))
 export const CACHE_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Per-period cache TTL. Long-range charts use weekly/monthly candles that barely
+ * move, so refetching them every 5 minutes only creates more chances to hit a
+ * flaky CORS proxy. This value also drives the `_t=` cache-buster embedded in the
+ * Yahoo URL, so a longer TTL means the upstream proxy cache (shared by every
+ * viewer) stays warm for longer.
+ */
+export const PERIOD_CACHE_TTL_MS: Record<PeriodLabel, number> = {
+	"1D": 60 * 1000,
+	"1W": 5 * 60 * 1000,
+	"1M": 5 * 60 * 1000,
+	"6M": 5 * 60 * 1000,
+	"1Y": 5 * 60 * 1000,
+	"5Y": 60 * 60 * 1000,
+	"10Y": 6 * 60 * 60 * 1000,
+};
+
+/**
+ * How long an expired cache entry is still worth serving when every endpoint
+ * fails. Past this age the entry is dropped instead of being shown as stale.
+ */
+export const STALE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Per-attempt network timeout. Free CORS proxies hang rather than fail. */
+export const FETCH_TIMEOUT_MS = 6000;
